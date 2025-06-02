@@ -1,0 +1,29 @@
+/* Ocultar completamente los botones nativos */
+.promo-slider .swiper-button-next,
+.promo-slider .swiper-button-prev {
+  display: none !important;
+}
+
+/* Bullets de paginación */
+.promo-slider .swiper-pagination-bullet {
+  width: 10px;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.6);
+  opacity: 0.6;
+}
+
+.promo-slider .swiper-pagination-bullet-active {
+  background: white;
+  opacity: 1;
+}
+
+/* Estética de los nuevos botones */
+.custom-nav-btn {
+  opacity: 0.8;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.custom-nav-btn:hover {
+  opacity: 1;
+  border-color: rgba(255, 255, 255, 0.5);
+}
