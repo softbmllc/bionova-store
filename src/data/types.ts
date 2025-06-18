@@ -1,16 +1,21 @@
 //src/data/types.ts
 export type Product = {
   id: string;
-  title: string;
+  title: {
+    en: string;
+    es: string;
+  };
   subtitle?: string;
   name: string;
   slug?: string;
-  description?: string;
+  description: {
+    en: string;
+    es: string;
+  };
   extraDescription?: string;
   priceUSD: number;
-  cjProductId: string;
   category: { id: string; name: string };
-  subCategory: { id: string; name: string };
+  subcategory: { id: string; name: string };
   team: { id: string; name: string };
   league: string;
   images?: string[];
@@ -24,6 +29,20 @@ export type Product = {
   allowCustomization?: boolean;
   customName?: string;
   customNumber?: string;
+  variants?: {
+    label: {
+      es: string;
+      en: string;
+    };
+    options: {
+      value: string;
+      priceUSD: number;
+      stock?: number;
+      variantLabel?: string;
+    }[];
+  }[];
+  stockTotal?: number;
+  sku?: string;
 };
 
 export interface League {
@@ -48,6 +67,7 @@ export type CartItem = {
   size: string;
   customName?: string;
   customNumber?: string;
+  options?: string;
 };
 
 export type User = {
@@ -82,4 +102,10 @@ export type Subcategory = {
   id: string;
   name: string;
   categoryId: string;
+};
+
+export type Category = {
+  id: string;
+  name: string;
+  subcategories: Subcategory[];
 };

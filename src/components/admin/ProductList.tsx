@@ -169,14 +169,14 @@ export default function ProductList() {
             <tbody>
               {filteredProducts.map((product) => (
                 <tr key={product.id} className="border-b">
-                  <td className="py-2">{product.title}</td>
+                  <td className="py-2">{product.title.es}</td>
                   <td className="py-2">
                     {typeof product.category === "object"
                       ? product.category?.name
                       : product.category || "Sin categoría"}
                   </td>
-                  <td className="py-2">{product.priceUSD} USD / {product.priceUYU} UYU</td>
-                  <td className="py-2">{Object.entries(product.stock ?? {}).map(([size, qty]) => `${size}: ${qty}`).join(", ")}</td>
+                  <td className="py-2">US$ {product.priceUSD}</td>
+                  <td className="py-2">{product.stockTotal ?? 0}</td>
                   <td className="py-2">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${product.active ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
                       {product.active ? "Activo" : "Inactivo"}
@@ -189,7 +189,7 @@ export default function ProductList() {
                     <button onClick={() => toggleActive(product.id!)} className="bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded text-xs">
                       {product.active ? "Desactivar" : "Activar"}
                     </button>
-                    <button onClick={() => handleDeleteClick(product.id!, product.title)} className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs">
+                    <button onClick={() => handleDeleteClick(product.id!, product.title.es)} className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded text-xs">
                       Eliminar
                     </button>
                   </td>

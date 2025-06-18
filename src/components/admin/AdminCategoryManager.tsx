@@ -15,8 +15,8 @@ import { firebaseDB } from "@/firebase";
 import { useConfirm } from "@/components/ui/confirm";
 
 export default function AdminCategoryManager() {
-  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
-  const [newCategory, setNewCategory] = useState("");
+  const [categories, setCategories] = useState<{ id: string; name: { es: string; en?: string } }[]>([]);
+  const [newCategory, setNewCategory] = useState<{ es: string; en: string }>({ es: "", en: "" });
   const [loading, setLoading] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("");
   const [subcategories, setSubcategories] = useState<{ id: string; name: string }[]>([]);
@@ -34,7 +34,12 @@ export default function AdminCategoryManager() {
   const loadCategories = async () => {
     try {
       const fetched = await fetchCategories();
-      setCategories(fetched.map((l) => ({ id: l.id, name: l.name })));
+      setCategories(
+        fetched.map((l) => ({
+          id: l.id,
+          name: typeof l.name === "object" ? l.name : { es: l.name, en: l.name }
+        }))
+      );
     } catch (err) {
       console.error("Error al cargar categorías:", err);
     }
@@ -50,11 +55,11 @@ export default function AdminCategoryManager() {
   };
 
   const handleCreateCategory = async () => {
-    if (!newCategory.trim()) return;
+    if (!newCategory.es.trim()) return;
     try {
       setLoading(true);
-      await createCategory(newCategory.trim());
-      setNewCategory("");
+      await createCategory({ es: newCategory.es.trim(), en: newCategory.en.trim() });
+      setNewCategory({ es: "", en: "" });
       await loadCategories();
     } catch (err) {
       console.error("Error creando categoría:", err);
@@ -67,7 +72,7 @@ export default function AdminCategoryManager() {
     const category = categories.find(l => l.id === id);
     const confirmed = await confirm({
       title: "¿Eliminar categoría?",
-      description: `¿Seguro que querés eliminar "${category?.name}" permanentemente?`,
+      description: `¿Seguro que querés eliminar "${category?.name.es}" permanentemente?`,
       confirmText: "Eliminar",
       cancelText: "Cancelar",
       variant: "danger",
@@ -124,16 +129,18 @@ export default function AdminCategoryManager() {
 
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-bold mb-4">Gestionar Categorías</h2>
+      <h2 className="text-2xl font-bold mb-4">Gestión de Categorías de Productos</h2>
 
       <div className="flex items-center gap-4 mb-6">
         <Input
-          placeholder="Nueva categoría (ej. Tecnología)"
-          value={newCategory}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewCategory(e.target.value)}
+          placeholder="Nueva categoría (ej. Electrónica, Fitness)"
+          value={newCategory.es}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            setNewCategory({ ...newCategory, es: e.target.value, en: e.target.value })
+          }
           disabled={loading}
         />
-        <Button onClick={handleCreateCategory} disabled={loading || !newCategory.trim()}>
+        <Button onClick={handleCreateCategory} disabled={loading || !newCategory.es.trim()}>
           Crear
         </Button>
       </div>
@@ -156,14 +163,14 @@ export default function AdminCategoryManager() {
                     value={editedCategoryName}
                     onChange={(e) => setEditedCategoryName(e.target.value)}
                     onBlur={async () => {
-                      if (!editedCategoryName.trim() || editedCategoryName === category.name) {
+                      if (!editedCategoryName.trim() || editedCategoryName === category.name.es) {
                         setEditingCategoryId(null);
                         return;
                       }
                       try {
                         setLoading(true);
                         const docRef = doc(firebaseDB, "categories", category.id);
-                        await setDoc(docRef, { id: category.id, name: editedCategoryName.trim() });
+                        await setDoc(docRef, { id: category.id, name: { es: editedCategoryName.trim(), en: editedCategoryName.trim() } });
                         await loadCategories();
                       } catch (err) {
                         console.error("Error actualizando nombre de categoría:", err);
@@ -183,7 +190,7 @@ export default function AdminCategoryManager() {
                       await loadSubcategories(category.id);
                     }}
                   >
-                    {category.name}
+                    {typeof category.name?.es === "string" ? category.name.es : ""}
                   </span>
                 )}
               </td>
@@ -204,13 +211,18 @@ export default function AdminCategoryManager() {
       {selectedCategoryId && (
         <div className="mt-10">
           <p className="text-sm text-gray-500 mb-1">
-            Visualizando subcategorías de: <span className="font-semibold">{categories.find(l => l.id === selectedCategoryId)?.name}</span>
+            Visualizando subcategorías de: <span className="font-semibold">
+              {(() => {
+                const cat = categories.find((l) => l.id === selectedCategoryId);
+                return typeof cat?.name === "object" ? cat.name.es : cat?.name || "";
+              })()}
+            </span>
           </p>
-          <h3 className="text-xl font-bold mb-4">Etiquetas</h3>
+          <h3 className="text-xl font-bold mb-4">Subcategorías</h3>
 
           <div className="flex items-center gap-4 mb-6">
             <Input
-              placeholder="Nueva etiqueta (ej. viral)"
+              placeholder="Nueva subcategoría (ej. Auriculares, Ropa deportiva)"
               value={newSubcategory}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewSubcategory(e.target.value)}
               disabled={loading}

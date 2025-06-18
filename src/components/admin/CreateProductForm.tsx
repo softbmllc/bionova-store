@@ -1,5 +1,6 @@
 // src/components/admin/CreateProductForm.tsx
 import React, { useState, useEffect, useRef } from "react";
+import TiptapEditor from "./TiptapEditor";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
 import { Product } from "../../data/types";
@@ -25,6 +26,7 @@ import {
   fetchSubcategories,
   fetchCategories,
 } from "../../firebaseUtils";
+import { importProductFromCJ } from '../../firebaseUtils';
 
 // Definimos los tamaños disponibles como una constante
 const SIZES = ["S", "M", "L", "XL"] as const;
@@ -120,25 +122,27 @@ export default function CreateProductForm() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const [formData, setFormData] = useState({
-    name: "",
-    title: "",
-    category: "",
-    subCategory: "",
-    team: "",
-    priceUSD: 0,
-    priceUYU: 0,
-    images: [],
-    sizes: ["S", "M", "L", "XL"],
-    stock: {
-      S: 0,
-      M: 0,
-      L: 0,
-      XL: 0,
-    },
-    active: true,
-    customizable: true,
-  });
+const [formData, setFormData] = useState({
+  name: "",
+  title: "",
+  category: "",
+  subCategory: "",
+  team: "",
+  priceUSD: 0,
+  images: [],
+  active: true,
+  customizable: true,
+  descriptionEs: "",
+  sku: "",
+  stockTotal: 0,
+  description: "", // <--- Aseguramos que description esté presente
+});
+
+  // Estados para campos en inglés
+  const [titleEn, setTitleEn] = useState("");
+  const [descriptionEn, setDescriptionEn] = useState("");
+
+  const [cjProductId, setCjProductId] = useState('');
 
   // Estado para mensaje de éxito visual
   const [successMessage, setSuccessMessage] = useState("");
@@ -148,19 +152,40 @@ const [loading, setLoading] = useState(false);
 const [error, setError] = useState("");
 const [images, setImages] = useState<string[]>([]);
 type Category = {
-  id: number;
-  name: string;
+  id: string;
+  name: string | { es?: string; en?: string };
 };
 
-const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
-const [subcategories, setSubcategories] = useState<{ id: string; name: string; categoryId: string }[]>([]);
+const [categories, setCategories] = useState<{ id: string; name: string | { es?: string; en?: string } }[]>([]);
+const [subcategories, setSubcategories] = useState<{ id: string; name: string | { es?: string; en?: string }; categoryId: string }[]>([]);
 const [uploadingImages, setUploadingImages] = useState(false);
 const fileInputRef = useRef<HTMLInputElement>(null);
 const [selectedCategory, setSelectedCategory] = useState("");
 const [selectedSubcategory, setSelectedSubcategory] = useState("");
 const [selectedTeam, setSelectedTeam] = useState("");
-const [product, setProduct] = useState<Partial<Product>>({});
+// Extensiones locales para permitir name multilingüe en category y subCategory
+type MultilingualName = string | { es?: string; en?: string };
+
+interface LocalCategory {
+  id: string;
+  name: MultilingualName;
+}
+
+interface LocalSubCategory {
+  id: string;
+  name: MultilingualName;
+}
+
+interface LocalProduct extends Omit<Product, "category" | "subCategory"> {
+  category: LocalCategory;
+  subCategory: LocalSubCategory;
+}
+
+const [product, setProduct] = useState<Partial<LocalProduct>>({});
 const [customizable, setCustomizable] = useState(true);
+
+  // Simular idioma activo (en producción vendrá del contexto)
+  const language = "es"; // o "en"
 
 useEffect(() => {
   const loadAllData = async () => {
@@ -168,13 +193,13 @@ useEffect(() => {
       const fetchedCategories = await fetchCategories();
       setCategories(fetchedCategories);
 
-      if (fetchedCategories.length > 0) {
-        const defaultCategoryId = fetchedCategories[0].id;
-        const fetchedSubcategories = await fetchSubcategories(defaultCategoryId);
+      // Nuevo: cargar subcategorías según la categoría seleccionada
+      if (selectedCategory) {
+        const fetchedSubcategories = await fetchSubcategories(selectedCategory);
         setSubcategories(
           fetchedSubcategories.map((sub) => ({
             ...sub,
-            categoryId: defaultCategoryId,
+            categoryId: selectedCategory,
           }))
         );
       }
@@ -187,6 +212,25 @@ useEffect(() => {
 
   loadAllData();
 }, []);
+
+// Nuevo useEffect: escuchar cambios en selectedCategory y cargar subcategorías dinámicamente
+useEffect(() => {
+  const loadSubcategories = async () => {
+    if (!selectedCategory) return;
+    try {
+      const fetched = await fetchSubcategories(selectedCategory);
+      setSubcategories(
+        fetched.map((sub) => ({
+          ...sub,
+          categoryId: selectedCategory,
+        }))
+      );
+    } catch (error) {
+      console.error("Error cargando subcategorías dinámicamente:", error);
+    }
+  };
+  loadSubcategories();
+}, [selectedCategory]);
 
 // 🔥 Mantener formData sincronizado con las selecciones
 useEffect(() => {
@@ -209,6 +253,13 @@ useEffect(() => {
 
 // 🧹 Luego sigue tu código normal
   // Configuración mejorada de sensores para drag and drop
+  // --- Variantes del producto con soporte multilenguaje y precios por opción ---
+  const [variants, setVariants] = useState<
+  {
+    label: { es: string; en: string };
+    options: { value: string; priceUSD: number; stock: number }[];
+  }[]
+>([]);
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -264,12 +315,6 @@ useEffect(() => {
       descriptionPosition: "bottom",
       active: true,
       customizable: true,
-      stock: {
-        S: 0,
-        M: 0,
-        L: 0,
-        XL: 0,
-      },
     },
   });
 
@@ -361,27 +406,41 @@ useEffect(() => {
 
       // Verificación de duplicidad de slug (ver comentarios anteriores para implementación)
 
-      const categoryName = categories.find((cat) => cat.id === selectedCategory)?.name || "";
-      const subcategoryName = subcategories.find((sub) => sub.id === selectedSubcategory)?.name || "";
+      const categoryRawName = categories.find((cat) => cat.id === selectedCategory)?.name || "";
+      const categoryName = typeof categoryRawName === "string" ? categoryRawName : (categoryRawName[language] || categoryRawName.es || "");
+      const subcategoryRawName = subcategories.find((sub) => sub.id === selectedSubcategory)?.name || "";
+      const subcategoryName = typeof subcategoryRawName === "string" ? subcategoryRawName : (subcategoryRawName[language] || subcategoryRawName.es || "");
+      // Cambiado: Guardar los campos title, titleEn, description, descriptionEn como strings separados
       const newProduct: Partial<Product> = {
-        title: title,
+        title: {
+          es: formData.title.trim() || titleEn.trim(),
+          en: titleEn.trim(),
+        },
+        description: {
+          es: formData.descriptionEs,
+          en: descriptionEn,
+        },
         slug: slug,
         category: { id: selectedCategory, name: categoryName },
-        subCategory: { id: selectedSubcategory, name: subcategoryName },
+        subcategory: { id: selectedSubcategory, name: subcategoryName },
         priceUSD: data.priceUSD,
-        cjProductId: data.cjProductId,
         defaultDescriptionType: data.defaultDescriptionType || "none",
         extraDescriptionTop: data.extraDescriptionTop || "",
         extraDescriptionBottom: data.extraDescriptionBottom || "",
         descriptionPosition: data.descriptionPosition || "bottom",
         active: data.active,
-        stock: data.stock,
         images: images,
         allowCustomization: data.customizable,
         customName: "",
         customNumber: "",
+        variants: variants,
+        sku: formData.sku || "",
+        stockTotal: variants.reduce(
+          (total, variant) =>
+            total + variant.options.reduce((sum, opt) => sum + (opt.stock || 0), 0),
+          0
+        ),
       };
-
       // 🔥 Verificación de nombres de categoría y subcategoría
       console.log("[Verificación]", categoryName, subcategoryName);
       console.log("[CreateProductForm] Producto listo para guardar:", newProduct);
@@ -424,12 +483,12 @@ useEffect(() => {
         </div>
       )}
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-    
+
         {/* Error general */}
         {error && (
           <div className="bg-red-100 text-red-700 p-4 rounded-md">{error}</div>
         )}
-    
+
         {/* Título */}
         <div className="space-y-2">
           <label htmlFor="title" className="block font-medium">
@@ -445,26 +504,37 @@ useEffect(() => {
           {errors.title && (
             <span className="text-red-500 text-sm">{errors.title.message}</span>
           )}
-        </div>
+          {/* Campo Título en Inglés */}
+          <label className="block text-sm font-medium text-gray-700 mt-4">Title (EN)</label>
+          <input
+            type="text"
+            value={titleEn}
+            onChange={(e) => setTitleEn(e.target.value)}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
+          />
 
-        {/* CJ Product ID */}
-<div className="space-y-2">
-  <label htmlFor="cjProductId" className="block font-medium">
-    CJ Product ID <span className="text-red-500">*</span>
-  </label>
-  <input
-    id="cjProductId"
-    type="text"
-    {...register("cjProductId", {
-      required: "El ID del producto en CJ Dropshipping es obligatorio",
-    })}
-    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-    placeholder="Ej: 100123456789"
-  />
-  {errors.cjProductId && (
-    <span className="text-red-500 text-sm">{errors.cjProductId.message}</span>
-  )}
-</div>
+<label className="block text-sm font-medium text-gray-700 mt-4">SKU (opcional)</label>
+<input
+  type="text"
+  value={formData.sku || ""}
+  onChange={(e) =>
+    setFormData((prev) => ({ ...prev, sku: e.target.value }))
+  }
+  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"
+/>
+
+          {/* Campo Descripción en Inglés */}
+          <label className="block text-sm font-medium text-gray-700 mt-4">Description (EN)</label>
+          <TiptapEditor content={descriptionEn} onChange={setDescriptionEn} />
+          {/* Campo Descripción en Español */}
+          <label className="block text-sm font-medium text-gray-700 mt-4">Descripción (ES)</label>
+          <TiptapEditor
+            content={formData.descriptionEs}
+            onChange={(value) =>
+              setFormData((prev) => ({ ...prev, descriptionEs: value }))
+            }
+          />
+        </div>
 
       {/* CATEGORÍA */}
 <div className="mb-4">
@@ -482,7 +552,7 @@ useEffect(() => {
     <option value="">Seleccionar categoría</option>
     {categories.map((cat) => (
       <option key={cat.id} value={cat.id}>
-        {cat.name}
+        {typeof cat.name === "string" ? cat.name : (cat.name?.[language] || cat.name?.es || "")}
       </option>
     ))}
   </select>
@@ -507,7 +577,7 @@ useEffect(() => {
       .filter((sub) => sub.categoryId === selectedCategory)
       .map((sub) => (
         <option key={sub.id} value={sub.id}>
-          {sub.name}
+          {typeof sub.name === "string" ? sub.name : (sub.name?.[language] || sub.name?.es || "")}
         </option>
       ))}
   </select>
@@ -538,89 +608,6 @@ useEffect(() => {
         </div>
 
 
-        {/* Stock */}
-        <div className="space-y-2">
-          <label className="block font-medium">
-            Stock disponible <span className="text-red-500">*</span>
-          </label>
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-    {SIZES.map((size) => (
-      <div key={size} className="space-y-1">
-        <label htmlFor={`stock.${size}`} className="block text-sm">
-          Talle {size}
-        </label>
-        <input
-          id={`stock.${size}`}
-          type="number"
-          min="0"
-          {...register(`stock.${size}` as const, {
-            valueAsNumber: true,
-          })}
-          className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-        />
-      </div>
-    ))}
-  </div>
-        </div>
-
-      {/* Descripción automática */}
-<div className="space-y-2">
-  <label htmlFor="defaultDescriptionType" className="block font-medium">
-    Descripción automática
-  </label>
-  <select
-    id="defaultDescriptionType"
-    {...register("defaultDescriptionType")}
-    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-  >
-    <option value="">Sin descripción automática</option>
-    <option value="camiseta">Camiseta</option>
-    {/* Futuras opciones: campera, short, etc */}
-  </select>
-</div>
-
-<div className="space-y-2 mt-4">
-  <label className="flex items-center space-x-2">
-    <input
-      type="checkbox"
-      checked={formData.customizable}
-      onChange={(e) =>
-        setFormData((prev) => ({ ...prev, customizable: e.target.checked }))
-      }
-      className="text-black rounded focus:ring-black h-5 w-5"
-    />
-    <span>Permitir personalización con nombre y número</span>
-  </label>
-</div>
-
-{/* Texto arriba de la descripción */}
-<div className="space-y-2">
-  <label htmlFor="extraDescriptionTop" className="block font-medium">
-    Texto adicional (arriba)
-  </label>
-  <textarea
-    id="extraDescriptionTop"
-    {...register("extraDescriptionTop")}
-    rows={3}
-    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-    placeholder="Texto opcional arriba de la descripción automática..."
-  ></textarea>
-</div>
-
-{/* Texto abajo de la descripción */}
-<div className="space-y-2">
-  <label htmlFor="extraDescriptionBottom" className="block font-medium">
-    Texto adicional (abajo)
-  </label>
-  <textarea
-    id="extraDescriptionBottom"
-    {...register("extraDescriptionBottom")}
-    rows={3}
-    className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-black"
-    placeholder="Texto opcional abajo de la descripción automática..."
-  ></textarea>
-</div>
 
       {/* Estado activo */}
       <div className="space-y-2">
@@ -633,6 +620,19 @@ useEffect(() => {
           <span>Producto activo (visible para clientes)</span>
         </label>
       </div>
+      <div className="space-y-2">
+  <label className="block text-sm font-medium">Stock disponible</label>
+  <input
+  type="number"
+  readOnly
+  value={variants.reduce(
+    (total, variant) =>
+      total + variant.options.reduce((sum, opt) => sum + (opt.stock || 0), 0),
+    0
+  )}
+  className="mt-1 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm focus:outline-none cursor-not-allowed"
+/>
+</div>
 
       {/* Imágenes */}
       <div className="space-y-4">
@@ -701,6 +701,109 @@ useEffect(() => {
           </div>
         )}
       </div>
+
+        {/* Variantes del producto con soporte multilenguaje y precios */}
+        <div className="mb-6">
+          <label className="block font-semibold mb-2">Variantes del producto</label>
+          {variants.map((variant, vIndex) => (
+            <div key={vIndex} className="mb-4 border p-3 rounded-md bg-gray-50">
+              <div className="flex gap-4 mb-2">
+                <input
+                  type="text"
+                  className="w-1/2 border p-2"
+                  placeholder="Nombre en español (Ej: Tamaño)"
+                  value={variant.label.es}
+                  onChange={(e) => {
+                    const updated = [...variants];
+                    updated[vIndex].label.es = e.target.value;
+                    setVariants(updated);
+                  }}
+                />
+                <input
+                  type="text"
+                  className="w-1/2 border p-2"
+                  placeholder="Nombre en inglés (Ej: Size)"
+                  value={variant.label.en}
+                  onChange={(e) => {
+                    const updated = [...variants];
+                    updated[vIndex].label.en = e.target.value;
+                    setVariants(updated);
+                  }}
+                />
+              </div>
+              {variant.options.map((option, oIndex) => (
+                <div key={oIndex} className="grid grid-cols-3 gap-2 mb-1">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Valor</label>
+                    <input
+                      type="text"
+                      className="w-full border p-2"
+                      placeholder="Ej: 60 cápsulas"
+                      value={option.value}
+                      onChange={(e) => {
+                        const updated = [...variants];
+                        updated[vIndex].options[oIndex].value = e.target.value;
+                        setVariants(updated);
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Precio (USD)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min={0}
+                      className="w-full border p-2"
+                      value={option.priceUSD}
+                      onChange={(e) => {
+                        const updated = [...variants];
+                        updated[vIndex].options[oIndex].priceUSD = parseFloat(e.target.value);
+                        setVariants(updated);
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Stock</label>
+                    <input
+                      type="number"
+                      min={0}
+                      className="w-full border p-2"
+                      value={option.stock || 0}
+                      onChange={(e) => {
+                        const updated = [...variants];
+                        updated[vIndex].options[oIndex].stock = parseInt(e.target.value);
+                        setVariants(updated);
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+              <button
+                type="button"
+                className="text-blue-600 text-sm mt-2"
+                onClick={() => {
+                  const updated = [...variants];
+                  updated[vIndex].options.push({ value: "", priceUSD: 0, stock: 0 });
+                  setVariants(updated);
+                }}
+              >
+                + Agregar opción
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            className="text-blue-600 mt-2"
+            onClick={() => {
+              setVariants([
+                ...variants,
+                { label: { es: "", en: "" }, options: [{ value: "", priceUSD: 0, stock: 0 }] },
+              ]);
+            }}
+          >
+            + Agregar variante
+          </button>
+        </div>
 
         {/* Botón de envío */}
         <div className="pt-4">

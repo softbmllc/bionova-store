@@ -29,7 +29,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
           item.id.toString() === newItem.id.toString() &&
           item.size === newItem.size &&
           item.customName === newItem.customName &&
-          item.customNumber === newItem.customNumber
+          item.customNumber === newItem.customNumber &&
+          item.options === newItem.options
       );
 
       if (existing) {

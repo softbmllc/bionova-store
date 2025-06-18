@@ -4,18 +4,22 @@ import LayoutRoutes from "./components/LayoutRoutes";
 import Hero from "./components/Hero";
 import CategorySection from "./components/CategorySection";
 import PromoSlider from "./components/PromoSlider";
-// import ProductPage from "./pages/ProductPage";
+import AboutPreview from "./components/AboutPreview";
+import ProductPage from "./pages/ProductPage";
 // import FootballPage from "./pages/FootballPage";
 import CartPage from "./pages/CartPage";
 // import SuccessPage from "./pages/SuccessPage";
 // import FailurePage from "./pages/FailurePage";
 // import PendingPage from "./pages/PendingPage";
 import AdminPanel from "./pages/AdminPanel";
+import AboutPage from "./pages/AboutPage";
+import ContactPage from "./pages/ContactPage";
 import LoginForm from "./components/LoginForm";
 import RequireAuth from "./components/RequireAuth";
 import AdminCategoryManager from "./components/admin/AdminCategoryManager"; // ✅ NUEVO componente oficial
 import OrderAdmin from "./components/admin/OrderAdmin";
 import ClientDetail from "./components/admin/ClientDetail";
+import Shop from "./pages/Shop";
 
 function ClientDetailWrapper() {
   const { id } = useParams();
@@ -32,6 +36,7 @@ function Home() {
       <Hero />
       <CategorySection />
       <PromoSlider />
+      <AboutPreview />
     </>
   );
 }
@@ -66,16 +71,20 @@ export default function App() {
         {/* ✅ Panel completo de administración */}
         <Route path="/admin/*" element={<RequireAuth><AdminPanel /></RequireAuth>} />
 
-        {/* ✅ Rutas públicas de secciones */}
+        {/* ✅ Ruta pública sin layout */}
         <Route path="/carrito" element={<CartPage />} />
 
-        {/* ✅ Rutas con layout */}
-        <Route path="/" element={<LayoutRoutes />}>
-          <Route index element={<Home />} />
-          <Route path="explore" element={<CategorySection />} />
-          <Route path="about" element={<div className='p-6 text-center'>Sobre nosotros</div>} />
-          <Route path="contact" element={<div className='p-6 text-center'>Contacto</div>} />
-        </Route>
+        {/* ✅ Ruta pública sin layout */}
+        <Route path="/producto/:slug" element={<ProductPage />} />
+
+        {/* ✅ Layout general para todas las rutas públicas */}
+<Route element={<LayoutRoutes />}>
+  <Route path="/" element={<Home />} />
+  <Route path="/explore" element={<CategorySection />} />
+  <Route path="/about" element={<AboutPage />} />
+  <Route path="/contact" element={<ContactPage />} />
+  <Route path="/shop" element={<Shop />} />
+</Route>
 
         {/* ✅ Fallback 404 */}
         <Route path="*" element={<Navigate to="/" replace />} />

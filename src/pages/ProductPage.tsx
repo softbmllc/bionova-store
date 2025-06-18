@@ -1,33 +1,29 @@
 //src/pages/ProductPage.tsx
 import { useParams, Link } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import CartIcon from "../components/CartIcon";
 import { fetchProductById, fetchProducts } from "../firebaseUtils";
 import { useCart } from "../context/CartContext";
-import { Check, ChevronLeft, ArrowUp, Shirt, Sparkles, Calendar, ScissorsLineDashed, Package } from "lucide-react";
+import { Check, ChevronLeft, ArrowUp } from "lucide-react";
 import { FiMinus, FiPlus } from "react-icons/fi";
-import { defaultDescriptions } from "../data/defaultDescriptions";
 import "keen-slider/keen-slider.min.css";
 import { useKeenSlider } from "keen-slider/react";
 import RelatedProducts from "../components/RelatedProducts";
+import Footer from "../components/Footer";
+import { useTranslation } from "react-i18next";
 
 export default function ProductPage() {
-  const { id } = useParams<{ id: string }>();
+  const { slug } = useParams<{ slug: string }>();
+  const decodedId = decodeURIComponent(slug || "").toLowerCase();
+  console.log("🧠 DEBUG PARAMS — slug:", slug);
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedSize, setSelectedSize] = useState("");
-  const [customName, setCustomName] = useState("");
-  const [selectedNumber, setSelectedNumber] = useState("");
+  const [selectedOption, setSelectedOption] = useState<{ value: string; priceUSD: number; variantLabel?: string } | null>(null);
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
-
-  // Custom alert/confirm states
-  const [showAlert, setShowAlert] = useState("");
-  const [showConfirm, setShowConfirm] = useState(false);
-
   const { addToCart, items } = useCart();
 
   // keen-slider logic
@@ -38,26 +34,57 @@ export default function ProductPage() {
     },
   });
 
+  const { i18n, t } = useTranslation();
+  const lang = i18n.language.startsWith("en") ? "en" : "es";
+
   useEffect(() => {
     async function loadProduct() {
-      if (!id) {
+      if (!slug) {
         setProduct(null);
         setLoading(false);
         return;
       }
       try {
-        const fetched = await fetchProductById(id);
-        if (fetched && fetched.title) {
-          setProduct({
-            ...fetched,
-            sizes: fetched.sizes || ["S", "M", "L", "XL"],
-            stock: fetched.stock || {},
-            defaultDescriptionType: fetched.defaultDescriptionType || "none",
-            customizable: fetched.allowCustomization ?? false,
-          });
-        } else {
+        const allProducts = await fetchProducts();
+        // Tipado explícito para TypeScript: product.stock es un objeto con valores numéricos
+        type StockType = { [key: string]: number };
+        console.log("🐞 DEBUG PAGE — productos recibidos:", allProducts, "slug:", slug);
+        const decodedSlug = decodedId;
+        // 🧩 DEBUG MATCHING
+        console.log(
+          "🧩 DEBUG MATCHING — slug:",
+          slug,
+          "decodedSlug:",
+          decodedSlug,
+          "slugs disponibles:",
+          allProducts.map((p: any) => p.slug)
+        );
+        // 🔍 DEBUG SLUG CHECK
+        console.log("🔍 DEBUG SLUG CHECK —", {
+          slug,
+          decodedSlug,
+          allSlugs: allProducts.map((p: any) => p.slug?.toLowerCase()),
+        });
+
+        const match = allProducts.find((p: any) => {
+          const firebaseSlug = decodeURIComponent(p.slug || "").trim().toLowerCase();
+          const currentSlug = decodeURIComponent(slug || "").trim().toLowerCase();
+          return firebaseSlug === currentSlug;
+        });
+
+        if (!match) {
+          console.warn("❌ No se encontró el producto con slug:", decodedSlug);
           setProduct(null);
+          setLoading(false);
+          return;
         }
+
+        console.log("✅ Producto encontrado:", match);
+        setProduct({
+          ...match,
+          title: match.title || "",
+          description: match.description || "",
+        });
       } catch (error) {
         console.error("[ProductPage] Error cargando producto:", error);
         setProduct(null);
@@ -66,7 +93,7 @@ export default function ProductPage() {
       }
     }
     loadProduct();
-  }, [id]);
+  }, [slug]);
 
   useEffect(() => {
     async function loadRelated() {
@@ -100,26 +127,39 @@ export default function ProductPage() {
     </div>
   );
 
-  const availableStock = selectedSize ? product.stock?.[selectedSize] ?? 0 : 0;
-  const hasCustomization = selectedNumber || customName;
-  const finalPriceUSD = hasCustomization ? product.priceUSD + 10 : product.priceUSD;
-  const finalPriceUYU = hasCustomization ? product.priceUYU + 400 : product.priceUYU;
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
 
+  // Determine description to show
+  let productDescription = typeof product.description === "object"
+    ? product.description?.[lang] || ""
+    : product.description || "";
+
+  const totalStock = typeof product.stockTotal === 'number' ? product.stockTotal : 0;
+  const isOutOfStock = totalStock <= 0;
 
   return (
-    <div className="bg-[#f7f7f7] min-h-screen w-full overflow-x-hidden">
-      <div className="w-full min-h-screen overflow-x-hidden text-black relative z-10">
-        <Helmet><title>{`${product.title} | Looma`}</title></Helmet>
-        <div className="container mx-auto p-4">
+    <div className="bg-[#f7f7f7] min-h-[100dvh] flex flex-col">
+      <div className="w-full overflow-x-hidden text-black relative z-10 flex-grow">
+        <Helmet><title>{`${product.title?.[lang] || product.title} | Looma`}</title></Helmet>
 
-        {/* Imagen principal */}
-        <Link
-          to="/futbol"
-          className="inline-flex items-center gap-2 text-sm font-medium text-gray-800 bg-white border border-gray-300 rounded-full px-4 py-2 hover:bg-black hover:text-white transition-shadow shadow-sm hover:shadow-md w-fit mb-4"
-        >
-          <ChevronLeft size={16} /> Volver al catálogo
-        </Link>
+        {/* Top-level floating controls */}
+        <div className="w-full flex justify-between items-center px-4 pt-4 z-50 relative">
+          <Link
+            to="/futbol"
+            className="inline-flex items-center gap-2 text-sm font-medium text-gray-800 bg-white border border-gray-300 rounded-full px-4 py-2 hover:bg-black hover:text-white transition-shadow shadow-sm hover:shadow-md w-fit"
+          >
+            <ChevronLeft size={16} /> {t('productPage.backToCatalog')}
+          </Link>
+
+          <Link
+            to="/carrito"
+            className="bg-black text-white p-2.5 rounded-full shadow-lg hover:bg-black/80 transition"
+          >
+            <CartIcon variant="hero" />
+          </Link>
+        </div>
+
+        <div className="container mx-auto p-4">
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
           <div className="flex flex-col gap-4">
@@ -182,66 +222,51 @@ export default function ProductPage() {
 
           {/* Detalles producto */}
           <div className="flex flex-col">
-            <span className="uppercase text-xs tracking-widest text-gray-500 mb-2">Producto destacado</span>
+            <span className="uppercase text-xs tracking-widest text-gray-500 mb-2">{t('productPage.featuredProduct')}</span>
             <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-tight mb-6">
-              {product.title}
+              {product.title?.[lang]}
             </h1>
             {product.subtitle && <p className="text-gray-600 mb-4">{product.subtitle}</p>}
 
             <div className="mb-6">
-              <div className="text-4xl font-extrabold text-black">${finalPriceUYU} <span className="text-xl font-semibold text-gray-700">UYU</span></div>
-              <div className="text-sm text-gray-400 italic mt-1">$ {finalPriceUSD} USD</div>
-            </div>
-
-            {/* Talles */}
-            <div className="mb-4">
-              <label className="uppercase text-sm font-semibold text-gray-800 mb-2">Talle</label>
-              <div className="grid grid-cols-4 gap-2">
-                {["S", "M", "L", "XL"].map((size) => {
-                  const stockForSize = product.stock?.[size] ?? 0;
-                  const active = selectedSize === size;
-                  return (
-                    <button
-                      key={size}
-                      onClick={() => {
-                        if (active) {
-                          setSelectedSize("");
-                        } else {
-                          setSelectedSize(size);
-                        }
-                      }}
-                      className={`p-2 text-sm rounded-md border text-center hover:border-gray-400 ${active ? "bg-black text-white" : ""}`}
-                    >
-                      <div className="font-semibold">{size}</div>
-                      <div className="text-xs">{stockForSize > 0 ? `${stockForSize} disponibles` : <span className="text-xs text-gray-500">Encargue</span>}</div>
-                    </button>
-                  );
-                })}
+              <div className="text-4xl font-extrabold text-black">
+                US$ {(selectedOption?.priceUSD ?? product.priceUSD).toFixed(2)}
               </div>
             </div>
 
-            {/* Personalización */}
-            {product?.customizable === true && (
-              <div className="mb-8">
-                <h3 className="uppercase text-sm font-semibold text-gray-800 mb-2 flex items-center gap-2"><ScissorsLineDashed size={18} /> Personalización (opcional)</h3>
-                <input
-                  value={selectedNumber.replace(/\D/g, "").slice(0, 2)}
-                  onChange={(e) => setSelectedNumber(e.target.value)}
-                  placeholder="Ej: 10"
-                  className="w-full mb-2 p-2 border rounded-md"
-                />
-                <input
-                  value={customName}
-                  onChange={(e) => setCustomName(e.target.value.slice(0, 10))}
-                  placeholder="Ej: RODRIGO"
-                  className="w-full p-2 border rounded-md"
-                />
+            {/* Opciones de variante multilenguaje y precio */}
+            {Array.isArray(product.variants) && product.variants.length > 0 && (
+              <div className="mb-6">
+                {product.variants.map((variant: any, vIndex: number) => (
+                  <div key={vIndex} className="mb-4">
+                    <h3 className="uppercase text-sm font-semibold text-gray-800 mb-2">
+                      {variant.label?.[lang] || "Opción"}
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {variant.options.map((option: any, oIndex: number) => (
+                        <button
+                          key={oIndex}
+                          onClick={() => {
+                            setSelectedOption({ ...option, variantLabel: variant.label?.[lang] || "Opción" });
+                          }}
+                          className={`px-4 py-2 rounded-md border ${
+                            selectedOption?.value === option.value
+                              ? "bg-black text-white border-black"
+                              : "bg-white text-black border-gray-300"
+                          } hover:shadow-md transition`}
+                        >
+                          {option.value}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
 
             {/* Cantidad */}
             <div className="mb-6 border-b border-gray-200 pb-6">
-              <label className="uppercase text-sm font-semibold text-gray-800 mb-2">Cantidad</label>
+              <label className="uppercase text-sm font-semibold text-gray-800 mb-2">{t('productPage.quantity')}</label>
               <div className="flex w-fit border rounded-md overflow-hidden">
                 <button onClick={() => quantity > 1 && setQuantity(quantity - 1)} className="px-3 bg-gray-100 hover:bg-gray-200"><FiMinus /></button>
                 <div className="px-4 py-2">{quantity}</div>
@@ -249,74 +274,56 @@ export default function ProductPage() {
               </div>
             </div>
 
-            {/* Descripción visual a la derecha */}
-            {product?.defaultDescriptionType === "camiseta" && (
-              <div className="space-y-4 pt-8 mt-2 mb-10 text-gray-800 text-[15px] border-t border-gray-200">
-                <div className="flex items-start gap-2">
-                  <Shirt size={18} className="mt-1 text-gray-600" />
-                  <p>Camiseta de alta calidad, confeccionada en tela liviana, suave y transpirable.</p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Sparkles size={18} className="mt-1 text-gray-600" />
-                  <p>Terminaciones premium que aseguran gran confort y durabilidad.</p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Calendar size={18} className="mt-1 text-gray-600" />
-                  <p>Ideal para el día a día, entrenar o sumar a tu colección futbolera.</p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Check size={18} className="mt-1 text-gray-600" />
-                  <p>Disponible en talles <strong>S, M, L y XL</strong>.</p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <ScissorsLineDashed size={18} className="mt-1 text-gray-600" />
-                  <p>Opción de personalización con nombre y número.</p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Package size={18} className="mt-1 text-gray-600" />
-                  <p>Consultar disponibilidad inmediata.</p>
-                </div>
-                <p className="italic font-semibold text-black text-sm">¡Viví el fútbol con estilo!</p>
-              </div>
+            {/* Descripción del producto */}
+            {productDescription && (
+              <div
+                className="prose prose-blue prose-lg max-w-none mb-8 text-gray-800 [&>p]:mb-4 [&>h2]:mt-8 [&>ul]:mb-4 [&>ul>li]:mb-2"
+                dangerouslySetInnerHTML={{ __html: productDescription }}
+              />
             )}
 
             {/* Botones */}
             <div className="grid md:grid-cols-2 gap-6 mt-6">
               <button
+                disabled={isOutOfStock}
                 onClick={() => {
-                  if (!selectedSize) {
-                    setShowAlert("Selecciona un talle");
+                  if (isOutOfStock) return;
+                  const price = selectedOption?.priceUSD ?? product.priceUSD;
+
+                  if (Array.isArray(product.variants) && product.variants.length > 0 && !selectedOption) {
+                    alert(lang === 'en' ? 'Please select an option.' : 'Por favor selecciona una opción.');
                     return;
                   }
-                  const selectedStock = product.stock?.[selectedSize] ?? 0;
-                  if (selectedStock === 0) {
-                    setShowConfirm(true);
-                    return;
-                  }
+
+                  // --- Verificación del tipo para evitar error de tipado de variantLabel
+                  const variantLabel = (selectedOption as any)?.variantLabel || "Opción";
+
                   addToCart({
                     id: String(product.id),
                     slug: product.slug,
                     name: product.title,
                     image: product.images?.[0] || product.image || "",
-                    priceUSD: finalPriceUSD,
-                    priceUYU: finalPriceUYU,
+                    priceUSD: price,
                     quantity,
-                    size: selectedSize,
-                    customName,
-                    customNumber: selectedNumber
+                    size: selectedOption?.value || "",
+                    options: selectedOption ? `${variantLabel}: ${selectedOption.value}` : "",
                   });
                   scrollToTop();
                 }}
-                className="bg-black text-white py-3 rounded-xl shadow-md hover:shadow-lg hover:bg-white hover:text-black transition flex items-center justify-center gap-2 border border-black"
+                className={`py-3 rounded-xl shadow-md hover:shadow-lg transition flex items-center justify-center gap-2 border font-semibold ${
+                  isOutOfStock
+                    ? 'bg-gray-300 text-white cursor-not-allowed'
+                    : 'bg-black text-white border-black hover:bg-white hover:text-black'
+                }`}
               >
-                <Check size={18} /> Agregar al carrito
+                {isOutOfStock ? (lang === 'en' ? 'OUT OF STOCK' : 'SIN STOCK') : (
+                  <>
+                    <Check size={18} /> {lang === 'en' ? 'Add to cart' : 'Agregar al carrito'}
+                  </>
+                )}
               </button>
 
-              {totalItems > 0 && (
-                <Link to="/carrito" className="bg-white text-black py-3 rounded-xl shadow-md border border-black hover:shadow-lg transition flex items-center justify-center gap-2">
-                  <CartIcon itemCount={totalItems} showCount={false} /> Ver carrito ({totalItems})
-                </Link>
-              )}
+              {/* (El botón de ver carrito ya no se muestra aquí, está arriba si corresponde) */}
             </div>
           </div>
         </div>
@@ -325,7 +332,7 @@ export default function ProductPage() {
           <RelatedProducts
             excludeSlugs={[product.slug]}
             categoryName={product.category?.name}
-            title="También podría interesarte"
+            title={t('productPage.relatedProducts')}
           />
         )}
 
@@ -336,68 +343,13 @@ export default function ProductPage() {
           </button>
         )}
 
-        {/* Carrito flotante */}
-        {totalItems > 0 && (
-          <Link to="/carrito" className="fixed top-6 right-6 bg-black text-white p-3 rounded-full shadow-lg hover:bg-black/80 transition z-50">
-            <CartIcon itemCount={totalItems} showCount={true} />
-          </Link>
-        )}
+        {/* Carrito flotante (moved above) */}
 
-        {/* Custom Alert/Confirm Modals */}
-        {showAlert && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
-            <div className="bg-white rounded-xl shadow-lg p-6 max-w-sm w-full text-center">
-              <p className="text-lg font-medium text-gray-800 mb-4">{showAlert}</p>
-              <button
-                onClick={() => setShowAlert("")}
-                className="bg-black text-white px-4 py-2 rounded-md hover:bg-gray-800"
-              >
-                Aceptar
-              </button>
-            </div>
-          </div>
-        )}
+        {/* No custom alert/confirm modals */}
+        </div> {/* cierra container mx-auto */}
 
-        {showConfirm && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
-            <div className="bg-white rounded-xl shadow-lg p-6 max-w-sm w-full text-center">
-              <p className="text-lg font-medium text-gray-800 mb-4">
-                No hay stock disponible para este talle. ¿Deseas realizar el pedido por encargue?
-              </p>
-              <div className="flex justify-center gap-4">
-                <button
-                  onClick={() => setShowConfirm(false)}
-                  className="px-4 py-2 rounded-md border border-gray-400 text-gray-600 hover:bg-gray-100"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={() => {
-                    setShowConfirm(false);
-                    addToCart({
-                      id: String(product.id),
-                      slug: product.slug,
-                      name: product.title,
-                      image: product.images?.[0] || product.image || "",
-                      priceUSD: finalPriceUSD,
-                      priceUYU: finalPriceUYU,
-                      quantity,
-                      size: selectedSize,
-                      customName,
-                      customNumber: selectedNumber
-                    });
-                    scrollToTop();
-                  }}
-                  className="px-4 py-2 bg-black text-white rounded-md hover:bg-gray-900"
-                >
-                  Aceptar
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-        </div>
       </div>
+      <Footer />
     </div>
   );
 }

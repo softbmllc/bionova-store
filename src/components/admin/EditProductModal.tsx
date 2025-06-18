@@ -1,7 +1,8 @@
 // src/components/admin/EditProductModal.tsx
 import { useState, useEffect } from "react";
+import TiptapEditor from "./TiptapEditor";
 import { Product } from "../../data/types";
-import { updateProduct, fetchLeagues, fetchSubcategories } from "../../firebaseUtils";
+import { updateProduct, fetchCategories, fetchSubcategories } from "../../firebaseUtils";
 import { generateSlug } from "../../utils/generateSlug";
 
 // Drag and Drop
@@ -48,8 +49,6 @@ interface Props {
 // Constantes para Cloudinary
 const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/ddkyumyw3/image/upload";
 const UPLOAD_PRESET = "unsigned_preset";
-
-const sizes = ["S", "M", "L", "XL"];
 
 // Componente para imagen arrastrable con flechas
 function SortableImageItem({
@@ -126,37 +125,50 @@ function SortableImageItem({
 }
 
 export default function EditProductModal({ product, onSave, onClose }: Props) {
-const [formData, setFormData] = useState<Product>({ ...product });
-const [saving, setSaving] = useState(false);
-const [error, setError] = useState("");
-const [uploadingImages, setUploadingImages] = useState(false);
+  const [formData, setFormData] = useState<Product>({ ...product });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [uploadingImages, setUploadingImages] = useState(false);
 
-const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
-const [subcategories, setSubcategories] = useState<{ id: string; name: string; categoryId: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string; categoryId: string }[]>([]);
+  const [subcategories, setSubcategories] = useState<{ id: string; name: string; categoryId: string }[]>([]);
 
-const [selectedCategory, setSelectedCategory] = useState(
-  typeof product.category === "string" ? product.category : product.category?.id || ""
-);
-const [selectedSubcategory, setSelectedSubcategory] = useState(
-  typeof product.subCategory === "string" ? product.subCategory : product.subCategory?.id || ""
-);
-const [selectedTeam, setSelectedTeam] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState(
+    typeof product.category === "string" ? product.category : product.category?.id || ""
+  );
+  const [selectedSubcategory, setSelectedSubcategory] = useState(() => {
+    if (typeof product.subcategory === "string") return product.subcategory;
+    if (typeof product.subcategory === "object" && product.subcategory?.id) return product.subcategory.id;
+    return "";
+  });
+  const [selectedTeam, setSelectedTeam] = useState<string>("");
 
-const sensors = useSensors(
-  useSensor(PointerSensor),
-  useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-);
+  // Descripciones en inglés y español (inputs controlados)
+  const [descriptionEN, setDescriptionEN] = useState(product.description?.en || "");
+  const [descriptionES, setDescriptionES] = useState(product.description?.es || "");
+  const [variants, setVariants] = useState(
+    product.variants || [{ label: { es: "", en: "" }, options: [{ value: "", priceUSD: 0 }] }]
+  );
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
 useEffect(() => {
   const loadAllData = async () => {
     try {
-      const leagues = await fetchLeagues();
-      const allSubcategoriesPromises = leagues.map((league) => fetchSubcategories(league.id));
-      const allSubcategories = (await Promise.all(allSubcategoriesPromises)).flat();
+      const categories = await fetchCategories();
+      const allSubcategoriesWithCategoryId = (await Promise.all(
+        categories.map(async (category: { id: string }) => {
+          const subs = await fetchSubcategories(category.id);
+          return subs.map((sub) => ({ ...sub, categoryId: category.id }));
+        })
+      )).flat();
 
-
-      setCategories(leagues);
-      setSubcategories(allSubcategories);
+      setCategories(categories.map((cat) => ({ ...cat, categoryId: cat.id })));
+      // setSubcategories(allSubcategories.map((sub) => ({ ...sub, categoryId: "" })));
+      setSubcategories(allSubcategoriesWithCategoryId);
     } catch (error) {
       console.error("[EditProductModal] Error al cargar datos desde Firebase:", error);
     }
@@ -189,9 +201,6 @@ const handleChange = (field: keyof Product, value: any) => {
   setFormData((prev) => ({ ...prev, [field]: value }));
 };
 
-const handleStockChange = (size: string, value: number) => {
-  setFormData((prev) => ({ ...prev, stock: { ...prev.stock, [size]: value } }));
-};
 
 const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
   if (!e.target.files || e.target.files.length === 0) return;
@@ -230,7 +239,7 @@ const handleSaveProduct = async () => {
   setError("");
   setSaving(true);
   try {
-    if (!formData.title?.trim()) {
+    if (!formData.title?.en.trim()) {
       setError("El nombre del producto es obligatorio.");
       setSaving(false);
       return;
@@ -248,41 +257,58 @@ const handleSaveProduct = async () => {
     const productId = String(formData.id);
     const { id, ...productData } = formData;
 
+    // Sincroniza variants en formData antes de guardar
+    formData.variants = variants;
+
     const selectedCategoryObj = categories.find((cat) => cat.id === selectedCategory);
     const selectedSubcategoryObj = subcategories.find((sub) => sub.id === selectedSubcategory);
+
+    const calculatedStockTotal = variants.reduce((total, variant) => {
+      return total + variant.options.reduce((sum, opt: any) => sum + (opt.stock || 0), 0);
+    }, 0);
 
     const updatedProduct: Product = {
       id: productId,
       ...productData,
-      title: (productData.title ?? "") as string,
-      slug: (productData.slug ?? generateSlug(productData.title ?? "")) as string,
+      stockTotal: calculatedStockTotal,
+      // productName: productData.productName?.trim() || "", // Removed: not part of Product type
+      title: {
+        en: productData.title?.en?.trim() || "",
+        es: productData.title?.es?.trim() || "",
+      },
+      slug: productData.slug ?? generateSlug(productData.title?.en ?? ""),
       images: productData.images || [],
       priceUSD: productData.priceUSD || 0,
-      priceUYU: productData.priceUYU || 0,
-      stock: {
-        S: productData.stock?.S || 0,
-        M: productData.stock?.M || 0,
-        L: productData.stock?.L || 0,
-        XL: productData.stock?.XL || 0,
-      },
+      stock: {},
       category: {
         id: selectedCategoryObj?.id ?? "",
         name: selectedCategoryObj?.name ?? "",
       },
-      subCategory: {
+      subcategory: {
         id: selectedSubcategoryObj?.id ?? "",
         name: selectedSubcategoryObj?.name ?? "",
       },
       defaultDescriptionType: productData.defaultDescriptionType || "none",
       extraDescriptionTop: productData.extraDescriptionTop || "",
       extraDescriptionBottom: productData.extraDescriptionBottom || "",
+      description: {
+        en: descriptionEN.trim(),
+        es: descriptionES.trim(),
+      },
       allowCustomization: productData.allowCustomization || false,
       descriptionPosition: productData.descriptionPosition || "bottom",
       active: productData.active !== undefined ? productData.active : true,
     };
 
-    await updateProduct(productId, updatedProduct);
-    onSave(updatedProduct);
+    await updateProduct(productId, {
+      ...updatedProduct,
+      variants: variants,
+    });
+    
+    onSave({
+      ...updatedProduct,
+      variants: variants,
+    });
   } catch (error) {
     console.error("Error al guardar producto:", error);
     setError("Error al guardar el producto. Intenta nuevamente.");
@@ -363,12 +389,26 @@ return (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="lg:col-span-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Título Interno</label>
-                <input
-                  type="text"
-                  value={formData.title || ""}
-                  onChange={(e) => handleChange("title", e.target.value)}
-                  className="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 rounded-md appearance-none"
-                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Título (EN)</label>
+                    <input
+                      type="text"
+                      value={formData.title?.en || ""}
+                      onChange={(e) => handleChange("title", { ...formData.title, en: e.target.value })}
+                      className="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 rounded-md appearance-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Título (ES)</label>
+                    <input
+                      type="text"
+                      value={formData.title?.es || ""}
+                      onChange={(e) => handleChange("title", { ...formData.title, es: e.target.value })}
+                      className="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 rounded-md appearance-none"
+                    />
+                  </div>
+                </div>
               </div>
               <div className="lg:col-span-2">
                 <label className="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
@@ -405,7 +445,13 @@ return (
                   {subcategories
                     .filter((sub) => sub.categoryId === selectedCategory)
                     .map((sub) => (
-                      <option key={sub.id} value={sub.id}>{sub.name}</option>
+                      <option key={sub.id} value={sub.id}>
+                        {typeof sub.name === "string"
+                          ? sub.name
+                          : typeof sub.name === "object" && sub.name !== null && "en" in sub.name && "es" in sub.name
+                          ? (sub.name as { en?: string; es?: string }).en ?? (sub.name as { en?: string; es?: string }).es ?? ""
+                          : ""}
+                      </option>
                     ))}
                 </select>
               </div>
@@ -421,50 +467,147 @@ return (
                   required
                 />
               </div>
-              <div className="lg:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Precio UYU</label>
-                <input
-                  type="number"
-                  value={formData.priceUYU || 0}
-                  onChange={(e) => handleChange("priceUYU", parseFloat(e.target.value))}
-                  className="remove-arrows shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 rounded-md appearance-none"
-                  min="0"
-                  step="1"
-                  required
-                />
+              {/* Precio UYU eliminado */}
+            </div>
+
+
+
+            {/* Descripción */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Descripción (EN)</label>
+                <TiptapEditor content={descriptionEN} onChange={setDescriptionEN} withDefaultStyles={true} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Descripción (ES)</label>
+                <TiptapEditor content={descriptionES} onChange={setDescriptionES} withDefaultStyles={true} />
               </div>
             </div>
 
-            {/* Stock */}
-            <div>
-              <h4 className="font-medium text-gray-900 mb-2">Stock por Talle</h4>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                {sizes.map((size) => (
-                  <div key={size} className="flex flex-col">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">{size}</label>
-                    <input
-                      type="number"
-                      value={formData.stock?.[size] || 0}
-                      onChange={(e) => handleStockChange(size, parseInt(e.target.value))}
-                      className="remove-arrows shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 rounded-md appearance-none"
-                      min="0"
-                    />
-                  </div>
-                ))}
-              </div>
+            {/* Variantes */}
+<div className="mt-6">
+  <label className="block font-semibold mb-2">Variantes del producto</label>
+  {variants.map((variant, vIndex) => (
+    <div key={vIndex} className="mb-4 border p-3 rounded-md bg-gray-50">
+      <div className="flex gap-4 mb-2">
+        <input
+          type="text"
+          className="w-1/2 border p-2"
+          placeholder="Nombre en español (Ej: Tamaño)"
+          value={variant.label.es}
+          onChange={(e) => {
+            const updated = [...variants];
+            updated[vIndex].label.es = e.target.value;
+            setVariants(updated);
+          }}
+        />
+        <input
+          type="text"
+          className="w-1/2 border p-2"
+          placeholder="Nombre en inglés (Ej: Size)"
+          value={variant.label.en}
+          onChange={(e) => {
+            const updated = [...variants];
+            updated[vIndex].label.en = e.target.value;
+            setVariants(updated);
+          }}
+        />
+      </div>
+      {variant.options.map((option, oIndex) => (
+        <div key={oIndex} className="grid grid-cols-3 gap-2 mb-1 items-end">
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Valor</label>
+            <input
+              type="text"
+              className="border p-2 w-full"
+              placeholder="Ej: 60 cápsulas"
+              value={option.value}
+              onChange={(e) => {
+                const updated = [...variants];
+                updated[vIndex].options[oIndex].value = e.target.value;
+                setVariants(updated);
+              }}
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Precio USD</label>
+            <input
+              type="number"
+              step="0.01"
+              min={0}
+              className="border p-2 w-full"
+              placeholder="Ej: 19.99"
+              value={option.priceUSD}
+              onChange={(e) => {
+                const updated = [...variants];
+                updated[vIndex].options[oIndex].priceUSD = parseFloat(e.target.value);
+                setVariants(updated);
+              }}
+            />
+          </div>
+          <div className="flex gap-1 items-end">
+            <div className="w-full">
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Stock</label>
+              <input
+                type="number"
+                min={0}
+                className="border p-2 w-full"
+                placeholder="Ej: 10"
+                value={option.stock || 0}
+                onChange={(e) => {
+                  const updated = [...variants];
+                  updated[vIndex].options[oIndex].stock = parseInt(e.target.value);
+                  setVariants(updated);
+                }}
+              />
             </div>
-
-            {/* Personalización */}
-<div>
-  <label className="flex items-center space-x-2 mt-4">
-    <input
-      type="checkbox"
-      checked={formData.allowCustomization || false}
-      onChange={(e) => handleChange("allowCustomization", e.target.checked)}
-      className="h-4 w-4 text-black border-gray-300 rounded focus:ring-black"
-    />
-    <span className="text-sm text-gray-700">Permitir personalización con nombre y número</span>
-  </label>
+            <button
+              type="button"
+              onClick={() => {
+                const updated = [...variants];
+                updated[vIndex].options = updated[vIndex].options.filter((_, i) => i !== oIndex);
+                setVariants(updated);
+              }}
+              className="ml-1 px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      ))}
+      <button
+        type="button"
+        className="text-blue-600 text-sm mt-2"
+        onClick={() => {
+          const updated = [...variants];
+          updated[vIndex].options.push({ value: "", priceUSD: 0 });
+          setVariants(updated);
+        }}
+      >
+        + Agregar opción
+      </button>
+      {/* Eliminar variante */}
+      <button
+        type="button"
+        onClick={() => {
+          const newVariants = variants.filter((_, i) => i !== vIndex);
+          setVariants(newVariants);
+        }}
+        className="bg-red-500 text-white px-2 py-1 rounded mt-2 ml-2"
+      >
+        Eliminar
+      </button>
+    </div>
+  ))}
+  <button
+    type="button"
+    className="text-blue-600 mt-2"
+    onClick={() => {
+      setVariants([...variants, { label: { es: "", en: "" }, options: [{ value: "", priceUSD: 0 }] }]);
+    }}
+  >
+    + Agregar variante
+  </button>
 </div>
 
             {/* Imágenes */}

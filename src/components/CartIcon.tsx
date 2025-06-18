@@ -14,7 +14,7 @@ export default function CartIcon({ variant = "floating", itemCount, showCount = 
   const { items } = useCart();
   const calculatedItemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
-  const baseStyle = "rounded-full bg-black/90 text-white shadow-xl";
+  const baseStyle = "rounded-full bg-blue-600 text-white shadow-xl hover:bg-blue-700 transition-colors";
   const size =
     variant === "hero"
       ? "w-12 h-12"

@@ -1,27 +1,44 @@
 // src/pages/Shop.tsx
 import React, { useState, useEffect, Suspense } from "react";
+import { useTranslation, Trans } from "react-i18next";
+import { useMemo } from "react";
 import { Helmet } from "react-helmet-async";
 import ProductCard from "../components/ProductCard";
-import { Product, LeagueData, Subcategory, Team } from "../data/types";
+import { Product, LeagueData, Subcategory, Category as BaseCategory } from "../data/types";
+
+type Category = BaseCategory & {
+  subcategories: Subcategory[];
+};
 import { FiFilter } from "react-icons/fi";
 import { FaFutbol, FaBasketballBall } from "react-icons/fa";
 import { motion } from "framer-motion";
 import CartIcon from "../components/CartIcon";
 import { ArrowUp, Bolt } from "lucide-react";
+import { Listbox } from "@headlessui/react";
+import { Check, ChevronDown } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
-import Footer from "../components/Footer";
 import { Rocket } from "lucide-react";
-import StockExpressButton from "../components/StockExpressButton";
-import { fetchProducts, fetchLeagues, fetchSubcategories, fetchTeams } from "../firebaseUtils";
+import { fetchProducts, fetchLeagues, fetchSubcategories, fetchCategories } from "../firebaseUtils";
 import ProductSkeleton from "../components/ProductSkeleton";
+import SidebarFilter from "../components/SidebarFilter";
+import Footer from "../components/Footer";
 
 // Define un tipo para productos locales
 type LocalProduct = Product & {
   active?: boolean;
+  category?: {
+    id: string;
+    name: string;
+  };
+  subcategory?: {
+    id: string;
+    name: string;
+  };
 };
 
 export default function Shop() {
+  const { t } = useTranslation();
   const [products, setProducts] = useState<LocalProduct[]>([]); // Estado para almacenar productos
   const [loading, setLoading] = useState(true);
   const location = useLocation();
@@ -32,20 +49,26 @@ export default function Shop() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  // Estado de ordenamiento
+  const [sortOption, setSortOption] = useState("");
   // --- Filtro por parámetro en la URL ---
   const searchParams = new URLSearchParams(location.search);
   const filterParamRaw = searchParams.get("filter");
   const filterParam = filterParamRaw ? filterParamRaw.toUpperCase() : "";
   
-  // Estado para almacenar las ligas dinámicas
-  const [dynamicLeagues, setDynamicLeagues] = useState<LeagueData[]>([]);
+// Estado para almacenar las ligas dinámicas
+const [dynamicLeagues, setDynamicLeagues] = useState<LeagueData[]>([]);
   const [noLeaguesAvailable, setNoLeaguesAvailable] = useState(false);
 
   // Estado para almacenar subcategorías
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
-  
+  // Estado para almacenar categorías (nuevo)
+  const [categories, setCategories] = useState<Category[]>([]);
   // Estado para almacenar equipos por subcategoría
-  const [teamsBySubcategory, setTeamsBySubcategory] = useState<Record<string, Team[]>>({});
+  const [teamsBySubcategory, setTeamsBySubcategory] = useState<Record<string, any[]>>({});
+  // Estado para categoría y subcategoría seleccionadas (nuevo)
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string>("");
 
   // 🔥 Cargar productos de Firebase al montar
   useEffect(() => {
@@ -79,14 +102,14 @@ export default function Shop() {
         const leaguesFetched = await fetchLeagues();
         console.log("[Shop] Ligas traídas desde Firebase:", leaguesFetched);
 
-        const allTeamsPromises = leaguesFetched.map(async (league) => {
+        const allTeamsPromises: Promise<{ id: string; name: string; teams: string[] }>[] = leaguesFetched.map(async (league) => {
           const allSubcategories = await fetchSubcategories(league.id);
-          const allTeamsPromises = allSubcategories.map((sub) =>
-            fetchTeams(league.id, sub.id)
+          // fetchTeams removed; placeholder
+          const allTeamsPromises: Promise<any[]>[] = allSubcategories.map(() =>
+            Promise.resolve([]) // Placeholder
           );
           const teamsFromAllSubs = await Promise.all(allTeamsPromises);
-          const flatTeamNames = teamsFromAllSubs.flat().map((team) => team.name);
-
+          const flatTeamNames: string[] = teamsFromAllSubs.flat().map((team) => (typeof team === "string" ? team : team.name || ""));
           return {
             id: league.id,
             name: league.name,
@@ -98,8 +121,12 @@ export default function Shop() {
 
         // Nuevo filtrado según filterParam
         const normalizedParam = filterParam.toLowerCase();
+        setDynamicLeagues(processedLeagues);
         const filteredLeagues = processedLeagues.filter((league) => {
-          const leagueName = league.name.trim().toLowerCase();
+          const leagueName = (typeof league.name === "string"
+            ? league.name
+            : league.name[i18n.language as "en" | "es"] || ""
+          ).trim().toLowerCase();
           if (normalizedParam === "nba") {
             return leagueName === "nba";
           }
@@ -135,61 +162,54 @@ export default function Shop() {
     loadLeagues();
   }, [filterParam]);
 
-  // 🔥 Cargar subcategorías cuando se tienen las ligas
+  // 🔥 Cargar categorías y subcategorías (nuevo useEffect)
   useEffect(() => {
-    const loadSubcategories = async () => {
-      if (dynamicLeagues.length === 0) return;
-      
+    const loadData = async () => {
       try {
-        const subcategoriesPromises = dynamicLeagues.map(league => 
-          fetchSubcategories(league.id)
-        );
-        
-        const allSubcategoriesResult = await Promise.all(subcategoriesPromises);
-        const allSubcategories = allSubcategoriesResult
-          .flat()
-          .filter((sub) => {
-            const league = dynamicLeagues.find((l) => l.id === sub.categoryId);
-            if (!league) return false;
-            const leagueName = league.name.toLowerCase();
-            if (filterParam.toUpperCase() === "NBA") return leagueName === "nba";
-            if (filterParam.toUpperCase() === "FUTBOL") return leagueName !== "nba";
-            return true;
-          });
-        
-        setSubcategories(allSubcategories);
-        console.log("[Shop] Subcategorías cargadas:", allSubcategories);
-        
-        // Ahora que tenemos las subcategorías, cargamos los equipos para cada una
-        const teamsPromises: Promise<void>[] = [];
-        
-        for (const league of dynamicLeagues) {
-          for (const subcategory of allSubcategories.filter(sub => sub.categoryId === league.id)) {
-            teamsPromises.push(
-              (async () => {
-                try {
-                  const teams = await fetchTeams(league.id, subcategory.id);
-                  setTeamsBySubcategory(prev => ({
-                    ...prev,
-                    [subcategory.id]: teams
-                  }));
-                } catch (error) {
-                  console.error(`[Shop] Error al cargar equipos para la subcategoría ${subcategory.id}:`, error);
-                }
-              })()
-            );
-          }
-        }
-        
-        await Promise.all(teamsPromises);
-        console.log("[Shop] Equipos cargados por subcategoría:", teamsBySubcategory);
+        // Ensure each category has 'subcategories' property (even if empty)
+        const rawCategories: any[] = await fetchCategories();
+        const categoriesWithSubs = rawCategories.map((cat) => ({
+          ...cat,
+          subcategories: cat.subcategories || [],
+        }));
+        setCategories(categoriesWithSubs);
+        const allSubs = categoriesWithSubs.flatMap(cat => cat.subcategories);
+        setSubcategories(allSubs);
       } catch (error) {
-        console.error("[Shop] Error al cargar subcategorías:", error);
+        console.error("[Shop] Error al cargar categorías y subcategorías:", error);
+        setCategories([]);
       }
     };
+    loadData();
+  }, []);
+  // Handlers para sidebar de categorías (nuevo)
+  const handleCategoryClick = (categoryName: string) => {
+    if (categoryName === '') {
+      setSelectedCategory('');
+      setSelectedSubcategory('');
+      return;
+    }
+    const category = categories.find((cat) => cat.name === categoryName);
+    if (category) {
+      setSelectedCategory(category.id);
+      setSelectedSubcategory('');
+    }
+  };
 
-    loadSubcategories();
-  }, [dynamicLeagues]);
+  const handleSubcategoryClick = (subcategoryName: string) => {
+    if (subcategoryName === '') {
+      setSelectedSubcategory('');
+      return;
+    }
+    for (const category of categories) {
+      const sub = category.subcategories?.find((s: any) => s.name === subcategoryName);
+      if (sub) {
+        setSelectedCategory(category.id);
+        setSelectedSubcategory(sub.id);
+        break;
+      }
+    }
+  };
 
   useEffect(() => {
     const isStock = searchParams.get("stock") === "true";
@@ -267,57 +287,57 @@ export default function Shop() {
     setIsFilterOpen(false);
   };
 
-  const getFilteredProducts = (): Product[] => {
-    const normalizedSearch = searchTerm.trim().toLowerCase();
-
-    if (normalizedSearch !== "") {
-      return products.filter((product) => {
-        // Buscar por título (no name)
-        const titleMatch = (product.title || "").toLowerCase().includes(normalizedSearch);
-        // Buscar por subcategoría, si existe
-        const subCategoryMatch =
-          product.subCategory && product.subCategory.name
-            ? product.subCategory.name.toLowerCase().includes(normalizedSearch)
-            : false;
-        // Buscar por categoría
-        const categoryMatch =
-          product.category && product.category.name
-            ? product.category.name.toLowerCase().includes(normalizedSearch)
-            : false;
-        return titleMatch || subCategoryMatch || categoryMatch;
-      });
-    }
-
-    if (selectedLeague === "STOCK_EXPRESS") {
-      // Filtrar productos que tienen stock
-      const productsWithStock = products.filter((product) => {
-        if (product.stock) {
-          return Object.values(product.stock).some(quantity => (quantity as number) > 0);
-        }
-        return false;
-      });
-      return productsWithStock.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
-    }
-
-    return products.filter((product) => {
-      // Filtrar por categoría
-      const leagueMatches = selectedLeague
-        ? (
-            product.category?.name === selectedLeague ||
-            product.category?.name?.toLowerCase() === selectedLeague.toLowerCase()
-          )
+  // Nuevo filtrado de productos usando useMemo, con lógica de subcategoría (versión robusta) y ordenamiento
+  const { i18n } = useTranslation();
+  const filteredProducts = useMemo(() => {
+    // Nuevo bloque de filtrado corregido:
+    const filtered = products.filter((product) => {
+      const categoryMatch = selectedCategory ? product.category?.id === selectedCategory : true;
+      const subcategoryMatch = selectedSubcategory ? product.subcategory?.id === selectedSubcategory : true;
+      const searchMatch = searchTerm
+        ? product.title?.[i18n.language as "en" | "es"]?.toLowerCase().includes(searchTerm.toLowerCase())
         : true;
-      // Filtrar por subcategoría si hay searchTerm igual a alguna subcategoría
-      const subCategoryMatches =
-        searchTerm && product.subCategory && product.subCategory.name
-          ? product.subCategory.name.toLowerCase().includes(searchTerm.trim().toLowerCase())
-          : true;
-      return leagueMatches && subCategoryMatches;
+      return categoryMatch && subcategoryMatch && searchMatch;
     });
-  };
+
+    // --- DEBUG: Mostrar por consola los valores del filtro y productos resultantes ---
+    console.log("Selected category:", selectedCategory);
+    console.log("Selected subcategory:", selectedSubcategory);
+    filtered.forEach(p => {
+      console.log(
+        "🧪",
+        p.title?.[i18n.language as "en" | "es"],
+        "| category.id:", p.category?.id,
+        "| subcategory.id:", p.subcategory?.id
+      );
+    });
+    // ---------------------------------------------------------
+
+    // Ordenamiento (si se desea conservar)
+    switch (sortOption) {
+      case "priceAsc":
+        return filtered.sort((a, b) => (a.priceUSD || 0) - (b.priceUSD || 0));
+      case "priceDesc":
+        return filtered.sort((a, b) => (b.priceUSD || 0) - (a.priceUSD || 0));
+      case "az":
+        return filtered.sort((a, b) =>
+          (a.title?.[i18n.language as "en" | "es"] || "").localeCompare(
+            b.title?.[i18n.language as "en" | "es"] || ""
+          )
+        );
+      case "za":
+        return filtered.sort((a, b) =>
+          (b.title?.[i18n.language as "en" | "es"] || "").localeCompare(
+            a.title?.[i18n.language as "en" | "es"] || ""
+          )
+        );
+      default:
+        return filtered;
+    }
+  }, [products, selectedCategory, selectedSubcategory, searchTerm, sortOption, i18n.language]);
 
   const isStockExpress = selectedLeague === "STOCK_EXPRESS";
-  const productsToDisplay = getFilteredProducts().filter((p) => {
+  const productsToDisplay = filteredProducts.filter((p) => {
     if (filterParam === "NBA") return p.category?.name === "NBA";
     if (filterParam === "FUTBOL") return p.category?.name !== "NBA";
     return true; // sin filtro, mostrar todo
@@ -347,11 +367,11 @@ export default function Shop() {
   
   if (loading) {
     return (
-      <section className="bg-[#f9f9f9] text-black min-h-screen">
+      <section className="bg-[#f9f9f9] text-black min-h-screen flex flex-col">
         <div className="relative w-full h-64 sm:h-96 overflow-hidden">
           <div className="w-full h-full bg-gray-200 animate-pulse" />
         </div>
-  
+
         <div className="max-w-7xl mx-auto p-6">
           <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8 mt-6">
             {Array.from({ length: 8 }).map((_, index) => (
@@ -359,12 +379,13 @@ export default function Shop() {
             ))}
           </div>
         </div>
+        {/* Footer intentionally removed from loading state to prevent duplication */}
       </section>
     );
   }
 
   return (
-    <section className="bg-[#f9f9f9] text-black min-h-screen">
+    <section className="bg-[#f9f9f9] text-black flex flex-col min-h-screen">
       <Helmet>
   <title>Tienda Online | Looma</title>
   <meta
@@ -378,40 +399,33 @@ export default function Shop() {
   <link rel="canonical" href="https://looma.store/shop" />
 </Helmet>
 
-      <div className="relative w-full h-64 sm:h-96 overflow-hidden">
-        <img
-          src={bannerImage}
-          alt="Banner principal"
-          className="w-full h-full object-cover"
-        />
-        <div className="absolute inset-0 bg-black/20" />
-      </div>
   
-
-      <div className="max-w-7xl mx-auto px-6 relative">
-        <div className="mt-4">
-          <Link
-            to="/"
-            className="text-black font-semibold hover:underline text-sm inline-flex items-center gap-1 transition"
-          >
-            ← Volver al inicio
-          </Link>
+  
+      <div className="relative">
+        <div className="absolute top-4 right-4 z-20">
+          <CartIcon />
         </div>
-        <div className="absolute right-2 top-0 translate-y-20 sm:translate-y-9 sm:right-0 z-50">
-          <CartIcon variant="hero" />
-        </div>
-
+      </div>
+      <div className="max-w-7xl mx-auto px-6 pt-6">
         <div className="flex justify-between sm:hidden mt-4 mb-2 gap-2">
           <button
             onClick={() => setIsFilterOpen(!isFilterOpen)}
             className="flex-1 flex items-center justify-center gap-2 text-sm text-gray-700 bg-white border border-gray-300 px-4 py-2 rounded-lg shadow-sm hover:bg-gray-50 transition"
           >
             <FiFilter className="text-lg" />
-            Filtros
+            {t("shop.filters", "Filtros")}
           </button>
         </div>
       </div>
   
+      <div className="w-full flex justify-between items-start px-6 pt-6 z-50 relative max-w-7xl mx-auto">
+        <Link
+          to="/"
+          className="inline-flex items-center gap-2 text-sm font-medium text-gray-800 bg-white border border-gray-300 rounded-full px-4 py-2 hover:bg-black hover:text-white transition-shadow shadow-sm hover:shadow-md w-fit"
+        >
+          ← {t("shop.backToHome", "Volver al inicio")}
+        </Link>
+      </div>
       <div className="md:grid md:grid-cols-[250px_1fr] max-w-7xl mx-auto p-6 gap-8">
         {/* Sidebar */}
         <motion.aside
@@ -422,95 +436,27 @@ export default function Shop() {
         >
           <div>
             <label className="block font-semibold text-sm mb-2" htmlFor="search">
-              Buscar por nombre
+              {t("shop.searchLabel", "Buscar por nombre")}
             </label>
             <input
               id="search"
               type="text"
-              placeholder="Ej: Real Madrid"
+              placeholder={t("shop.searchPlaceholder", "Ej: magnesio")}
               className="w-full border px-3 py-2 rounded-lg text-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-  
-          {/* Ver todo eliminado */}
-  
-          {/* Botón Stock Express */}
-          <div className="mb-4">
-            <StockExpressButton
-              isSelected={selectedLeague === "STOCK_EXPRESS"}
-              onClick={() => handleLeagueClick("STOCK_EXPRESS")}
-            />
-          </div>
 
-          {/* Filtrar por deporte */}
-          <div className="mb-6">
-            <h2 className="text-[15px] font-semibold uppercase tracking-wide text-gray-600 mb-1">Filtrar por deporte</h2>
-            <div className="space-y-2">
-              <button
-                onClick={() => navigate("?filter=FUTBOL")}
-                className={`w-full text-left px-3 py-2 rounded-lg transition ring-1 ring-transparent text-[15px] uppercase tracking-wide font-semibold flex items-center ${
-                  filterParam === "FUTBOL"
-                    ? "bg-black text-white ring-black"
-                    : "hover:bg-gray-100 text-gray-800"
-                }`}
-              >
-                <FaFutbol className="mr-2" />
-                Fútbol
-              </button>
-              <button
-                onClick={() => navigate("?filter=NBA")}
-                className={`w-full text-left px-3 py-2 rounded-lg transition ring-1 ring-transparent text-[15px] uppercase tracking-wide font-semibold flex items-center ${
-                  filterParam === "NBA"
-                    ? "bg-black text-white ring-black"
-                    : "hover:bg-gray-100 text-gray-800"
-                }`}
-              >
-                <FaBasketballBall className="mr-2" />
-                NBA
-              </button>
-            </div>
-          </div>
 
-          {/* Sidebar: Ligas y subcategorías */}
-          <h2 className="text-[15px] font-semibold uppercase tracking-wide text-gray-600 mb-1">Categorías</h2>
-          <div className="space-y-6">
-            {dynamicLeagues
-              .filter((league) => league.name !== "STOCK_EXPRESS")
-              .map((league) => (
-                <div key={league.id}>
-                  <button
-                    onClick={() => handleLeagueClick(league.name)}
-                    className={`w-full text-left px-3 py-2 rounded-lg transition ring-1 ring-transparent text-[15px] font-semibold ${
-                      selectedLeague === league.name
-                        ? "bg-black text-white ring-black"
-                        : "hover:bg-gray-100 text-gray-800"
-                    } mb-1`}
-                  >
-                    {league.name}
-                  </button>
-                  <ul className="space-y-1 ml-2">
-                    {subcategories
-                      .filter((sub) => sub.categoryId === league.id)
-                      .map((sub) => (
-                        <li key={sub.id}>
-                          <button
-                            onClick={() => {
-                              setSelectedLeague(league.name);
-                              setSelectedTeam("");
-                              setSearchTerm(sub.name);
-                            }}
-                            className="text-sm text-gray-800 hover:bg-gray-100 px-2 py-1 rounded transition"
-                          >
-                            {sub.name}
-                          </button>
-                        </li>
-                      ))}
-                  </ul>
-                </div>
-              ))}
-          </div>
+          {/* SidebarFilter con props para filtro de categoría y subcategoría */}
+          <SidebarFilter
+            categories={categories}
+            selectedCategory={selectedCategory}
+            setSelectedCategory={setSelectedCategory}
+            selectedSubcategory={selectedSubcategory}
+            setSelectedSubcategory={setSelectedSubcategory}
+          />
 
           {/* Para móviles: sidebar en modal */}
           <AnimatePresence>
@@ -531,7 +477,7 @@ export default function Shop() {
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold">Filtros</h2>
+                    <h2 className="text-xl font-bold">{t("shop.filters", "Filtros")}</h2>
                     <button
                       onClick={() => setIsFilterOpen(false)}
                       className="p-1 rounded-full hover:bg-gray-100 transition"
@@ -543,15 +489,15 @@ export default function Shop() {
                   <div className="space-y-6">
                     <div>
                       <label className="block font-semibold text-sm mb-2">
-                        Buscar por nombre
+                        {t("shop.searchLabel", "Buscar por nombre")}
                       </label>
-                      <input
-                        type="text"
-                        placeholder="Ej: Real Madrid"
-                        className="w-full border px-3 py-2 rounded-lg text-sm"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                      />
+                    <input
+                      type="text"
+                      placeholder={t("shop.searchPlaceholder", "Ej: magnesio")}
+                      className="w-full border px-3 py-2 rounded-lg text-sm"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
                     </div>
 
                     <div>
@@ -563,55 +509,10 @@ export default function Shop() {
                             : "hover:bg-gray-100 text-gray-800"
                         }`}
                       >
-                        Ver todo
+                        {t("shop.viewAll", "Ver todo")}
                       </Link>
                     </div>
                     
-                    {/* StockExpress móvil */}
-                    <div>
-                      <StockExpressButton 
-                        isSelected={selectedLeague === "STOCK_EXPRESS"}
-                        onClick={() => {
-                          handleLeagueClick("STOCK_EXPRESS");
-                          setIsFilterOpen(false);
-                        }}
-                      />
-                    </div>
-
-                    {/* Filtrar por deporte móvil */}
-                    <div className="mb-6">
-                      <h2 className="text-[15px] font-semibold uppercase tracking-wide text-gray-600 mb-1">Filtrar por deporte</h2>
-                      <div className="space-y-2">
-                        <button
-                          onClick={() => {
-                            navigate("?filter=FUTBOL");
-                            setIsFilterOpen(false);
-                          }}
-                          className={`w-full text-left px-3 py-2 rounded-lg transition ring-1 ring-transparent text-[15px] uppercase tracking-wide font-semibold flex items-center ${
-                            filterParam === "FUTBOL"
-                              ? "bg-black text-white ring-black"
-                              : "hover:bg-gray-100 text-gray-800"
-                          }`}
-                        >
-                          <FaFutbol className="mr-2" />
-                          Fútbol
-                        </button>
-                        <button
-                          onClick={() => {
-                            navigate("?filter=NBA");
-                            setIsFilterOpen(false);
-                          }}
-                          className={`w-full text-left px-3 py-2 rounded-lg transition ring-1 ring-transparent text-[15px] uppercase tracking-wide font-semibold flex items-center ${
-                            filterParam === "NBA"
-                              ? "bg-black text-white ring-black"
-                              : "hover:bg-gray-100 text-gray-800"
-                          }`}
-                        >
-                          <FaBasketballBall className="mr-2" />
-                          NBA
-                        </button>
-                      </div>
-                    </div>
                     
                     {/* Ligas móvil */}
                     <div>
@@ -633,6 +534,29 @@ export default function Shop() {
                               >
                                 {league.name}
                               </button>
+                              <ul className="space-y-1 ml-2">
+                                {subcategories
+                                  .filter((sub): sub is Subcategory =>
+                                    'categoryId' in sub &&
+                                    typeof sub.categoryId === 'string' &&
+                                    sub.categoryId === league.id
+                                  )
+                                  .map((sub) => (
+                                    <li key={sub.id}>
+                                      <button
+                                        onClick={() => {
+                                          setSelectedLeague(league.name);
+                                          setSelectedTeam("");
+                                          setSearchTerm(sub.name);
+                                          setIsFilterOpen(false);
+                                        }}
+                                        className="text-sm text-gray-800 hover:bg-gray-100 px-2 py-1 rounded transition"
+                                      >
+                                        {sub.name}
+                                      </button>
+                                    </li>
+                                  ))}
+                              </ul>
                             </li>
                           ))}
                       </ul>
@@ -649,21 +573,21 @@ export default function Shop() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold">
               {searchTerm
-                ? `Resultados para "${searchTerm}"`
+                ? t("shop.resultsFor", { search: searchTerm, defaultValue: 'Resultados para "{{search}}"', searchTerm })
                 : isStockExpress
-                ? "Stock Express"
+                ? t("shop.stockExpress", "Stock Express")
                 : selectedLeague && selectedTeam
                 ? `${selectedLeague} - ${selectedTeam}`
                 : selectedLeague
                 ? selectedLeague
                 : filterParam === "NBA"
-                ? "NBA"
+                ? t("shop.nba", "NBA")
                 : filterParam === "FUTBOL"
-                ? "Fútbol"
-                : "Todos los productos Looma"}
+                ? t("shop.soccer", "Fútbol")
+                : t("shop.allProducts", "Productos disponibles")}
             </h1>
             <p className="text-gray-600 mt-1 text-sm">
-              {productsToDisplay.length} productos encontrados
+              {t("shop.productsFound", { count: productsToDisplay.length, defaultValue: "{{count}} productos encontrados" })}
             </p>
             {(searchTerm || selectedLeague || selectedTeam) && (
               <button
@@ -671,11 +595,13 @@ export default function Shop() {
                   setSearchTerm("");
                   setSelectedLeague("");
                   setSelectedTeam("");
+                  setSelectedCategory("");
+                  setSelectedSubcategory("");
                   navigate(".", { replace: true });
                 }}
                 className="mt-2 text-sm font-semibold text-gray-700 hover:text-black underline"
               >
-                Limpiar filtros
+                {t('shop.clearFilters')}
               </button>
             )}
           </div>
@@ -689,21 +615,77 @@ export default function Shop() {
                 </div>
                 <div>
                   <h2 className="text-xl font-bold mb-1 flex items-center">
-                    Stock Express{" "}
+                    {t("shop.stockExpress", "Stock Express")}{" "}
                     <span className="bg-red-600 text-white text-xs px-2 py-0.5 rounded-full ml-2">
-                      ¡Envío inmediato!
+                      {t("shop.immediateShipping", "¡Envío inmediato!")}
                     </span>
                   </h2>
                   <p className="text-gray-300 max-w-lg">
-                    Estos productos están disponibles para envío inmediato. El
-                    envío se realiza dentro de las 24 horas hábiles siguientes a
-                    la confirmación de pago.
+                    {t(
+                      "shop.stockExpressDescription",
+                      "Estos productos están disponibles para envío inmediato. El envío se realiza dentro de las 24 horas hábiles siguientes a la confirmación de pago."
+                    )}
                   </p>
                 </div>
               </div>
             </section>
           )}
 
+          {/* Dropdown de ordenamiento */}
+          <div className="flex justify-end items-center mt-4">
+            <Listbox value={sortOption} onChange={setSortOption}>
+              {({ open }) => (
+                <div className="relative w-52">
+                  <Listbox.Button className="w-full cursor-pointer rounded-md border border-gray-300 bg-white py-2 pl-4 pr-10 text-left shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm flex justify-between items-center">
+                    <span>
+                      {{
+                        "": t("shop.sortBy", "Ordenar por"),
+                        priceAsc: t("shop.sortPriceAsc", "Precio: menor a mayor"),
+                        priceDesc: t("shop.sortPriceDesc", "Precio: mayor a menor"),
+                        az: t("shop.sortNameAZ", "Nombre: A a Z"),
+                        za: t("shop.sortNameZA", "Nombre: Z a A"),
+                      }[sortOption] || t("shop.sortBy", "Ordenar por")}
+                    </span>
+                    <ChevronDown
+                      className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+                    />
+                  </Listbox.Button>
+                  <Listbox.Options className="absolute mt-1 w-full rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 text-sm">
+                    {[
+                      { value: "", label: t("shop.sortBy", "Ordenar por") },
+                      { value: "priceAsc", label: t("shop.sortPriceAsc", "Precio: menor a mayor") },
+                      { value: "priceDesc", label: t("shop.sortPriceDesc", "Precio: mayor a menor") },
+                      { value: "az", label: t("shop.sortNameAZ", "Nombre: A a Z") },
+                      { value: "za", label: t("shop.sortNameZA", "Nombre: Z a A") },
+                    ].map((option) => (
+                      <Listbox.Option
+                        key={option.value}
+                        className={({ active }) =>
+                          `cursor-pointer select-none relative py-2 pl-10 pr-4 ${
+                            active ? "bg-blue-50 text-blue-900" : "text-gray-900"
+                          }`
+                        }
+                        value={option.value}
+                      >
+                        {({ selected }) => (
+                          <>
+                            <span className={`block truncate ${selected ? "font-semibold" : "font-normal"}`}>
+                              {option.label}
+                            </span>
+                            {selected && (
+                              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-blue-600">
+                                <Check className="h-4 w-4" />
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </Listbox.Option>
+                    ))}
+                  </Listbox.Options>
+                </div>
+              )}
+            </Listbox>
+          </div>
           {/* Grid de productos */}
           <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-8 mt-6">
             <Suspense
@@ -711,24 +693,31 @@ export default function Shop() {
                 <ProductSkeleton key={index} />
               ))}
             >
-              {productsToDisplay.length > 0 ? (
-                productsToDisplay.map((product) => (
+              {filteredProducts.length > 0 ? (
+                filteredProducts.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))
               ) : (
-                <div className="col-span-full text-center py-16">
-                  <p className="text-gray-500 font-medium">
-                    No se encontraron productos para esta selección. Prueba otros filtros o vuelve a{" "}
-                    <button
-                      onClick={() => {
-                        setSearchTerm("");
-                        setSelectedLeague("");
-                        setSelectedTeam("");
+                <div className="col-span-full py-16 min-h-[300px] text-center space-y-4">
+                  <p className="text-gray-500 font-medium max-w-xl mx-auto text-center">
+                    <Trans
+                      i18nKey="shop.noResultsClickable"
+                      components={{
+                        showAll: (
+                          <button
+                            onClick={() => {
+                              setSearchTerm('');
+                              setSelectedLeague('');
+                              setSelectedTeam('');
+                              setSelectedCategory('');
+                              setSelectedSubcategory('');
+                              navigate('.', { replace: true });
+                            }}
+                            className="text-blue-600 hover:underline font-semibold"
+                          />
+                        ),
                       }}
-                      className="text-blue-600 underline hover:text-blue-800"
-                    >
-                      Ver todos
-                    </button>.
+                    />
                   </p>
                 </div>
               )}
@@ -741,13 +730,13 @@ export default function Shop() {
         <button
           onClick={scrollToTop}
           className="fixed bottom-6 right-6 z-30 p-3 bg-black text-white rounded-full shadow-lg hover:bg-gray-800 transition"
-          aria-label="Volver arriba"
+          aria-label={t("shop.scrollToTop", "Volver arriba")}
         >
           <ArrowUp className="h-5 w-5" />
         </button>
       )}
 
-      <Footer />
+      {/* Footer removed: now included via LayoutRoutes */}
     </section>
   );
 }
@@ -763,4 +752,4 @@ export default function Shop() {
 //   <>
 //     {/* name and number fields */}
 //   </>
-// )}
+// )} 

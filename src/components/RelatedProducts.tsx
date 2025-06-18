@@ -1,9 +1,11 @@
 // src/components/RelatedProducts.tsx
 import { useEffect, useState } from "react";
+import i18n from "../i18n-config";
 import { fetchProducts } from "../firebaseUtils";
 import ProductCard from "./ProductCard";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useRef } from "react";
+import { useTranslation } from "react-i18next";
 
 interface Props {
   excludeSlugs?: string[];
@@ -13,6 +15,8 @@ interface Props {
 
 export default function RelatedProducts({ excludeSlugs = [], categoryName, title }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const { i18n } = useTranslation();
+  const language = i18n.language;
 
   const [products, setProducts] = useState<any[]>([]);
 
@@ -78,34 +82,31 @@ export default function RelatedProducts({ excludeSlugs = [], categoryName, title
         ref={scrollRef}
         className="flex gap-5 overflow-x-auto pb-2 scroll-smooth hide-scrollbar snap-x snap-mandatory"
       >
-        {filtered.map((product) => (
-          <div
-            key={product.id}
-            className="flex-shrink-0 snap-start scroll-ml-4 w-[270px] transition-transform hover:scale-[1.015]"
-          >
-            <div className="rounded-lg shadow-sm hover:shadow-md overflow-hidden bg-white">
-              <div className="h-[320px] overflow-hidden">
-                <img
-                  src={product.image || product.images?.[0]}
-                  alt={product.title}
-                  className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                />
-              </div>
-              <div className="p-2">
-                <h3 className="font-semibold mb-1 line-clamp-2">{product.title}</h3>
-                <p className="text-gray-500 mb-1">
-                  ${product.priceUYU} UYU / ${product.priceUSD} USD
-                </p>
-                <a
-                  href={`/producto/${product.slug}`}
-                  className="inline-block text-blue-500 hover:underline text-sm"
-                >
-                  Ver más
-                </a>
-              </div>
+        {filtered.map((product) => {
+          const translatedTitle = typeof product.title === 'object' && product.title !== null
+            ? product.title[language] || product.title['en'] || "Sin título"
+            : typeof product.title === 'string'
+            ? product.title
+            : "Sin título";
+          const priceUSD = product.priceUSD || 0;
+          const slug = product.slug;
+
+          return (
+            <div key={product.id} className="flex-shrink-0 snap-start scroll-ml-4 w-[270px]">
+              <ProductCard
+                product={{
+                  ...product,
+                  title: {
+                    en: product.title?.en || "",
+                    es: product.title?.es || ""
+                  },
+                  priceUSD,
+                  slug
+                }}
+              />
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

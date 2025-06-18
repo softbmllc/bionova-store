@@ -1,7 +1,8 @@
 // src/components/LoginForm.tsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { authenticateUser } from "../utils/userUtils";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../firebaseConfig";
 import { useAuth } from "../context/AuthContext";
 
 export default function LoginForm() {
@@ -10,15 +11,15 @@ export default function LoginForm() {
   const navigate = useNavigate();
   const { login } = useAuth();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const user = authenticateUser(email, password);
-
-    if (user) {
-      login({ ...user, id: user.id.toString(), password }); // usar la contraseña real ingresada
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      login({ id: user.uid, email: user.email || "", name: "", password });
       alert("Inicio de sesión exitoso");
       navigate("/admin", { replace: true });
-    } else {
+    } catch (error) {
       alert("Usuario o contraseña incorrectos");
     }
   };

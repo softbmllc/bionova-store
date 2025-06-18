@@ -1,14 +1,17 @@
 //src/components/VideoShowcase.tsx
 import React from "react";
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 const videoUrls = [
-  "https://res.cloudinary.com/ddkyumyw3/video/upload/v1746401493/showcase2_pfqyma.mov",
-  "https://res.cloudinary.com/ddkyumyw3/video/upload/v1746401497/showcase3_kk5jf7.mov",
-  "https://res.cloudinary.com/ddkyumyw3/video/upload/v1746401499/showcase1_gvptxu.mov"
+  "https://res.cloudinary.com/ddkyumyw3/video/upload/v1750003770/FUXION2_f6kk4g.mp4",
+  "https://res.cloudinary.com/ddkyumyw3/video/upload/v1750000500/PURE2_detyqs.mp4",
+  "https://res.cloudinary.com/ddkyumyw3/video/upload/v1750119796/PURE7_l5zvrs.mov"
 ];
 
 export default function VideoShowcase() {
+  const { t } = useTranslation();
+
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -31,12 +34,14 @@ export default function VideoShowcase() {
     <section className="bg-white pb-0 mb-0 pt-16 px-4 text-black">
       <div className="max-w-7xl mx-auto">
         <div className="animate-fadeIn">
-          <h2 className="video-showcase-title text-4xl sm:text-6xl font-extrabold text-center mb-1 tracking-tight text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.45)] transition-all duration-700">
-            Momentos destacados en acción
+          <h2 className="video-showcase-title text-4xl sm:text-6xl font-extrabold text-center mb-1 tracking-tight text-[#365486] drop-shadow-[0_4px_12px_rgba(0,0,0,0.4)] transition-all duration-700">
+            {t('highlights.title')}
           </h2>
-          <p className="video-showcase-title text-center text-base sm:text-lg text-white/70 mt-2 mb-10 transition-opacity duration-700 delay-300">
-            Moda deportiva con espíritu de barrio
-          </p>
+          <div className="video-showcase-title text-center mt-2 mb-10 transition-opacity duration-700 delay-300">
+            <p className="text-base sm:text-lg text-gray-700">
+              {t('highlights.subtitle')}
+            </p>
+          </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-1 lg:grid-cols-3 gap-8">
           {videoUrls.map((url, i) => (

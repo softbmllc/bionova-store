@@ -1,7 +1,13 @@
 // src/components/ProductCard.tsx
 import { Link } from "react-router-dom";
 import { Product } from "../data/types";
+
+type LocalizedTitle = {
+  en: string;
+  es: string;
+};
 import { motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 type ProductCardProps = {
   product: Product;
@@ -17,12 +23,15 @@ export default function ProductCard({ product }: ProductCardProps) {
   // Obtener la imagen principal, asegurando que existe
   const productImage = (product.images && product.images.length > 0 ? product.images[0] : "");
 
-  // Asegurar que tenemos un nombre de producto
-  const productName = product.name || product.title || "Producto";
+  const { i18n } = useTranslation();
+  const language = i18n.language as "en" | "es";
+
+  const productName = product.title?.[language] || "Sin título";
 
   // Asegurar que tenemos precios
   const productPriceUSD = product.priceUSD || 0;
-  const productPriceUYU = product.priceUYU || 0;
+
+  console.log("🧩 DEBUG CARD —", product.slug, product.title);
 
   return (
     <motion.div
@@ -58,7 +67,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             {productName}
           </h3>
           <div className="mt-1.5 text-base font-semibold">
-            $ {productPriceUYU} UYU / $ {productPriceUSD} USD
+            US$ {productPriceUSD.toFixed(2)}
           </div>
         </div>
       </Link>

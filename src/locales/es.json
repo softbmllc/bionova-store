@@ -1,13 +1,141 @@
 {
-    "hero": {
-      "title": "Estilo, confianza y diseño para cada momento.",
-      "subtitle": "Artículos únicos seleccionados con criterio profesional.",
-      "cta": "Explorar productos",
-      "tagline": "Descubrí productos que marcan tendencia, pensados para destacar tu día a día."
-    },
-    "nav": {
-      "shop": "Tienda",
-      "about": "Nosotros",
-      "contact": "Contacto"
-    }
+  "hero": {
+    "tagline": "Soluciones naturales para tu bienestar diario",
+    "headline1": "Nutrición celular",
+    "headline2": "con respaldo científico",
+    "description": "Descubrí los productos Fuxion seleccionados para transformar tu salud desde adentro.",
+    "button": "Ver productos Fuxion"
+  },
+  "dw": {
+    "tagline": "Suplementos Naturales",
+    "headline1": "Apoyo Cognitivo",
+    "headline2": "y Bienestar Diario",
+    "description": "Descubrí Double Wood Supplements: salud cerebral, energía y longevidad con respaldo natural.",
+    "button": "Ver productos Double Wood"
+  },
+  "pure": {
+    "tagline": "Bienestar Puro",
+    "headline1": "Suplementos de",
+    "headline2": "Alta Calidad",
+    "description": "Descubrí nuestra línea premium de suplementos nutricionales diseñados para un bienestar óptimo.",
+    "button": "Descubrir Pure"
+  },
+  "nav": {
+    "shop": "Tienda",
+    "about": "Nosotros",
+    "contact": "Contacto"
+  },
+  "productPage": {
+    "relatedProducts": "Productos relacionados",
+    "addToCart": "Agregar al carrito",
+    "outOfStock": "Agotado",
+    "selectSize": "Seleccioná un talle",
+    "customizationNote": "Las camisetas personalizadas requieren tiempo adicional de entrega.",
+    "inStock": "En stock",
+    "preOrder": "Por encargue",
+    "description": "Descripción",
+    "price": "Precio",
+    "backToCatalog": "Volver al catálogo",
+    "quantity": "Cantidad",
+    "featuredProduct": "Producto destacado"
+  },
+  "shop": {
+    "clearFilters": "Limpiar filtros",
+    "showAll": "Mostrar todo",
+    "allProducts": "Productos disponibles",
+    "searchPlaceholder": "Ej: magnesio",
+    "filterBy": "Marcas y líneas",
+    "backToHome": "Volver al inicio",
+    "searchLabel": "Buscar por nombre",
+    "productsFound": "{{count}} producto encontrado",
+    "productsFound_plural": "{{count}} productos encontrados",
+    "sortBy": "Ordenar por",
+    "sortPriceAsc": "Precio: menor a mayor",
+    "sortPriceDesc": "Precio: mayor a menor",
+    "sortNameAZ": "Nombre: A a Z",
+    "sortNameZA": "Nombre: Z a A",
+    "noProductsFound": "No se encontraron productos para esta selección. Probá con otros filtros o volvé a Mostrar todo.",
+    "noResults": "No se encontraron productos para esta selección. Probá con otros filtros o volvé a Mostrar todo.",
+    "noResultsClickable": "No se encontraron productos para esta selección. Probá con otros filtros o volvé a <showAll>Mostrar todo</showAll>."
   }
+  ,
+  "promoSlider": {
+    "slide1": {
+      "title": "La ciencia de Fuxion en acción",
+      "subtitle": "Innovación nutricional en cada sorbo"
+    },
+    "slide2": {
+      "title": "Tu salud, tu elección",
+      "subtitle": "Productos nutracéuticos para un mejor bienestar"
+    },
+    "slide3": {
+      "title": "Fuxion transforma vidas",
+      "subtitle": "Nutrición de vanguardia, resultados reales"
+    },
+    "slide4": {
+      "title": "Vitalidad desde la raíz",
+      "subtitle": "Fórmulas basadas en ciencia y naturaleza"
+    },
+    "slide5": {
+      "title": "Pure Encapsulations",
+      "subtitle": "Suplementos premium basados en evidencia clínica"
+    },
+    "slide6": {
+      "title": "Confianza médica",
+      "subtitle": "Formulados sin alérgenos comunes"
+    },
+    "slide7": {
+      "title": "Pura transparencia",
+      "subtitle": "Ingredientes puros, resultados reales"
+    },
+    "slide8": {
+      "title": "Calidad sin compromisos",
+      "subtitle": "Estándares estrictos en cada cápsula"
+    },
+    "slide9": {
+      "title": "Ciencia natural en acción",
+      "subtitle": "Apoyo cognitivo con respaldo herbal"
+    },
+    "slide10": {
+      "title": "Energía y foco diario",
+      "subtitle": "Suplementos que impulsan tu día"
+    },
+    "slide11": {
+      "title": "Fórmulas avanzadas",
+      "subtitle": "Pureza y potencia desde la naturaleza"
+    },
+    "slide12": {
+      "title": "Tu salud, nuestra misión",
+      "subtitle": "Confianza respaldada por miles de usuarios"
+    },
+    "cta": "COMPRAR AHORA"
+  },
+  "categories": {
+    "title": "Marcas que potencian tu bienestar",
+    "eyebrow": "NUTRICIÓN FUNCIONAL Y BIENESTAR",
+    "powerfulBrands": "Marcas que potencian tu bienestar"
+  }
+,
+  "highlights": {
+    "title": "Bienestar en acción",
+    "subtitle": "Descubrí cómo nuestros suplementos mejoran tu salud cada día."
+  },
+  "about": {
+    "title": "Quiénes somos",
+    "description": "Bionova es una tienda online dedicada a ofrecer suplementos de alta calidad que potencian tu salud y bienestar. Seleccionamos cuidadosamente productos de marcas reconocidas como Fuxion, Pure Encapsulations y Double Wood Supplements, combinando naturaleza y ciencia en cada elección. Operamos desde Miami y realizamos envíos seguros a todo Estados Unidos.",
+    "mission": "Nuestra misión es acercarte soluciones naturales respaldadas por la ciencia, con atención personalizada, entregas rápidas y una experiencia de compra simple y confiable.",
+    "addressLabel": "Dirección comercial",
+    "address": "20200 NW 2nd Ave, STE 108\nMiami Gardens, FL 33169, USA",
+    "emailLabel": "Email de contacto",
+    "email": "info@getbionova.com",
+    "cta": "Conocé nuestros productos",
+    "subtitle": "NUESTRO COMPROMISO",
+    "headline": "Ciencia, naturaleza y bienestar en cada fórmula",
+    "preview": "En Bionova te acercamos suplementos naturales de alta calidad, cuidadosamente seleccionados de marcas líderes como Fuxion, Pure Encapsulations y Double Wood. Combinamos evidencia científica con el poder de la naturaleza para apoyar tu salud de forma integral y confiable."
+  },
+  "contact": {
+    "title": "¿Necesitás ayuda? Estamos para vos.",
+    "description": "Podés escribirnos en cualquier momento a nuestro correo electrónico y te responderemos a la brevedad. Nuestro equipo está basado en Miami y te asistirá en inglés o español, según prefieras.",
+    "cta": "Escribinos por email"
+  }
+}

@@ -6,7 +6,6 @@ interface Product {
   title: string;
   category: string;
   priceUSD: number;
-  priceUYU: number;
   stock: Record<string, number>;
   images: string[];
   extraDescription: string;
@@ -84,12 +83,6 @@ export default function ProductEditForm({ productId, onBack }: Props) {
           type="number"
           value={product.priceUSD}
           onChange={(e) => handleChange("priceUSD", Number(e.target.value))}
-          className="border px-3 py-2 rounded"
-        />
-        <input
-          type="number"
-          value={product.priceUYU}
-          onChange={(e) => handleChange("priceUYU", Number(e.target.value))}
           className="border px-3 py-2 rounded"
         />
 

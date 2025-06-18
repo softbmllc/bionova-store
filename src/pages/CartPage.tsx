@@ -12,7 +12,6 @@ import { collection, doc, setDoc, Timestamp } from "firebase/firestore";
 
 export default function CartPage() {
   const { items, updateItem, clearCart } = useCart();
-  const [currency, setCurrency] = useState<"USD" | "UYU">("USD");
   const [loading, setLoading] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
@@ -53,17 +52,17 @@ const [resetConfirm, setResetConfirm] = useState("");
       items: items.map(item => ({
         id: item.id,
         nombre: item.name,
-        precio: currency === "USD" ? item.priceUSD : item.priceUYU,
+        precio: item.priceUSD,
         cantidad: item.quantity,
         talle: item.size,
         customName: item.customName,
         customNumber: item.customNumber,
       })),
       total: items.reduce((sum, item) => {
-        const price = currency === "USD" ? item.priceUSD : item.priceUYU;
+        const price = item.priceUSD;
         return sum + price * item.quantity;
       }, 0),
-      moneda: currency,
+      moneda: "USD",
       // estado eliminado, ahora se define en Firestore como "En Proceso"
       fecha: new Date().toISOString(),
     };
@@ -199,8 +198,8 @@ const [resetConfirm, setResetConfirm] = useState("");
           items: items.map((item) => ({
             title: item.name,
             quantity: item.quantity,
-            unit_price: currency === "USD" ? item.priceUSD : item.priceUYU,
-            currency_id: currency,
+            unit_price: item.priceUSD,
+            currency_id: "USD",
           })),
           payer: {
             name: shippingInfo.name,
@@ -233,7 +232,7 @@ const [resetConfirm, setResetConfirm] = useState("");
   };
 
   const total = items.reduce((sum, item) => {
-    const price = currency === "USD" ? item.priceUSD : item.priceUYU;
+    const price = item.priceUSD;
     return sum + price * item.quantity;
   }, 0);
 
@@ -431,25 +430,11 @@ const [resetConfirm, setResetConfirm] = useState("");
 
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">Resumen de tu compra</h2>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setCurrency("USD")}
-                className={`px-4 py-2 rounded-md border text-sm ${currency === "USD" ? "bg-black text-white" : "bg-white text-black"}`}
-              >
-                Pagar en USD
-              </button>
-              <button
-                onClick={() => setCurrency("UYU")}
-                className={`px-4 py-2 rounded-md border text-sm ${currency === "UYU" ? "bg-black text-white" : "bg-white text-black"}`}
-              >
-                Pagar en UYU
-              </button>
-            </div>
           </div>
 
           <ul className="divide-y divide-gray-200 mb-6">
             {items.map((item, index) => {
-              const price = currency === "USD" ? item.priceUSD : item.priceUYU;
+              const price = item.priceUSD;
               const totalItem = price * item.quantity;
               return (
                 <li key={index} className="py-4 flex gap-4 items-center">
@@ -503,7 +488,7 @@ const [resetConfirm, setResetConfirm] = useState("");
                     )}
                   </div>
                   <div className="text-right text-sm whitespace-nowrap font-semibold">
-                    ${totalItem} {currency}
+                    ${totalItem} USD
                   </div>
                 </li>
               );
@@ -514,7 +499,7 @@ const [resetConfirm, setResetConfirm] = useState("");
             <div className="flex items-center justify-between mb-4">
               <span className="text-lg font-medium text-gray-700">Total</span>
               <span className="text-2xl font-bold text-gray-900">
-                ${total} {currency}
+                ${total} USD
               </span>
             </div>
 

@@ -3,11 +3,13 @@ import { Helmet } from "react-helmet-async";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { FaFutbol, FaBasketballBall } from "react-icons/fa";
+import { useTranslation } from "react-i18next";
 
 export default function CategorySection() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
-  return (
+  return (  
     <section
   id="catalogo"
   className="py-24 text-center scroll-mt-16 bg-white"
@@ -25,45 +27,39 @@ export default function CategorySection() {
       </Helmet>
 
       <motion.p
-        className="text-sm uppercase text-black/50 tracking-widest mb-3"
+        className="text-sm uppercase text-[#003366] tracking-widest mb-6"
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, ease: 'easeOut' }}
       >
-        ESTILO Y PASIÓN
+        {t('categories.eyebrow')}
       </motion.p>
-      <h2 className="text-4xl sm:text-5xl font-extrabold mb-12 text-black tracking-tight uppercase drop-shadow-[0_4px_12px_rgba(0,0,0,1)]">
-        CATEGORÍAS
+      <h2 className="text-4xl sm:text-6xl font-extrabold text-center mb-12 tracking-tight text-[#365486] drop-shadow-[0_2px_4px_rgba(0,0,0,0.45)] transition-all duration-700">
+        {t('categories.title')}
       </h2>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-10 max-w-6xl mx-auto px-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-10 max-w-6xl mx-auto px-6">
         {/* Fútbol */}
         <motion.div
           whileInView={{ opacity: 1, scale: 1 }}
           initial={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          onClick={() => navigate("/futbol?filter=FUTBOL")}
+          onClick={() => navigate("/shop?brand=FUXION")}
           role="button"
           tabIndex={0}
-          onKeyDown={(e) => e.key === "Enter" && navigate("/futbol?filter=FUTBOL")}
-          className="group relative rounded-xl overflow-hidden shadow-xl ring-1 ring-white/10 transition-transform duration-500 hover:scale-105 cursor-pointer"
+          onKeyDown={(e) => e.key === "Enter" && navigate("/shop?brand=FUXION")}
+          className="group relative rounded-xl overflow-hidden shadow-xl ring-1 ring-white/10 transition-transform duration-500 hover:scale-105 cursor-pointer h-72 bg-white"
         >
-          <img
-            src="/images/categoria-futbol.jpg"
-            alt="Fútbol"
-            className="w-full h-72 object-cover group-hover:scale-110 transition-all duration-500"
-          />
           <div className="absolute inset-0 flex items-center justify-center p-6">
-            <div className="flex items-center gap-2">
-              <FaFutbol className="text-black text-2xl group-hover:text-[#00ffc8] transition-colors duration-300" />
-              <motion.span
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
+            <div className="flex items-center justify-center w-full h-full">
+              <motion.img
+                src="/images/logo-fuxion.png"
+                alt="Fuxion"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.6, ease: 'easeOut' }}
-                className="text-black text-3xl sm:text-4xl font-extrabold tracking-wide drop-shadow-[0_4px_12px_rgba(0,0,0,1)]"
-              >
-                FÚTBOL
-              </motion.span>
+                className="max-w-[80%] max-h-[80%] object-contain transition-transform duration-500 group-hover:scale-110"
+              />
             </div>
           </div>
         </motion.div>
@@ -73,28 +69,47 @@ export default function CategorySection() {
           whileInView={{ opacity: 1, scale: 1 }}
           initial={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          onClick={() => navigate("/futbol?filter=NBA")}
+          onClick={() => navigate("/shop?brand=PURE")}
           role="button"
           tabIndex={0}
-          onKeyDown={(e) => e.key === "Enter" && navigate("/futbol?filter=NBA")}
-          className="group relative rounded-xl overflow-hidden shadow-xl ring-1 ring-white/10 transition-transform duration-500 hover:scale-105 cursor-pointer"
+          onKeyDown={(e) => e.key === "Enter" && navigate("/shop?brand=PURE")}
+          className="group relative rounded-xl overflow-hidden shadow-xl ring-1 ring-white/10 transition-transform duration-500 hover:scale-105 cursor-pointer h-72 bg-white"
         >
-          <img
-            src="/images/categoria-nba.jpg"
-            alt="NBA"
-            className="w-full h-72 object-cover group-hover:scale-110 transition-all duration-500"
-          />
           <div className="absolute inset-0 flex items-center justify-center p-6">
-            <div className="flex items-center gap-2">
-              <FaBasketballBall className="text-black text-2xl group-hover:text-[#ffb347] transition-colors duration-300" />
-              <motion.span
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
+            <div className="flex items-center justify-center w-full h-full">
+              <motion.img
+                src="/images/logo-pure.png"
+                alt="Pure"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.6, ease: 'easeOut' }}
-                className="text-black text-3xl sm:text-4xl font-extrabold tracking-wide drop-shadow-[0_4px_12px_rgba(0,0,0,1)]"
-              >
-                NBA
-              </motion.span>
+                className="max-w-[80%] max-h-[80%] object-contain transition-transform duration-500 group-hover:scale-110"
+              />
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Double Wood */}
+        <motion.div
+          whileInView={{ opacity: 1, scale: 1 }}
+          initial={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          onClick={() => navigate("/shop?brand=DOUBLEWOOD")}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === "Enter" && navigate("/shop?brand=DOUBLEWOOD")}
+          className="group relative rounded-xl overflow-hidden shadow-xl ring-1 ring-white/10 transition-transform duration-500 hover:scale-105 cursor-pointer h-72 bg-white"
+        >
+          <div className="absolute inset-0 flex items-center justify-center p-6">
+            <div className="flex items-center justify-center w-full h-full">
+              <motion.img
+                src="/images/Double Wood-logo.png"
+                alt="Double Wood"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6, ease: 'easeOut' }}
+                className="max-w-[80%] max-h-[80%] object-contain transition-transform duration-500 group-hover:scale-110"
+              />
             </div>
           </div>
         </motion.div>

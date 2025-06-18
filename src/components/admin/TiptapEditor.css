@@ -1,0 +1,12 @@
+.ProseMirror {
+    outline: none;
+    min-height: 150px;
+  }
+  
+  .ProseMirror p.is-editor-empty:first-child::before {
+    color: #aaa;
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+  }

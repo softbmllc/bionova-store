@@ -7,7 +7,6 @@ import ProductForm from "../components/admin/ProductForm";
 import OrderList from "../components/admin/OrderList";
 import UserList from "../components/admin/UserList";
 import AdminCategoryManager from "../components/admin/AdminCategoryManager"; // ✅ archivo nuevo
-import AdminTeams from "../components/admin/AdminTeams"; // 🆕 Mantener
 import OrderAdmin from "../components/admin/OrderAdmin";
 import { ClientDetailWrapper } from "../components/admin/ClientDetail";
 
