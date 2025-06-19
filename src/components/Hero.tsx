@@ -25,7 +25,7 @@ export default function HeroSection() {
   ];
 
   return (
-    <section className="relative min-h-[100vh] flex flex-col items-center justify-center overflow-hidden pt-0 sm:pt-0 md:pt-0 xl:pt-0">
+    <section className="relative min-h-[100vh] flex flex-col items-center justify-center overflow-hidden pt-[96px] sm:pt-0 md:pt-0 xl:pt-0">
 
       {/* Removed backgroundImage div as no video or background is used */}
       <div className="absolute inset-0 z-0 bg-neutral-50"></div>
@@ -112,7 +112,7 @@ export default function HeroSection() {
                 <span className="uppercase text-base sm:text-lg tracking-widest font-semibold mt-2 mb-4">
                   {slide.tagline}
                 </span>
-                <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight mb-2 leading-tight">
+                <h1 className={`text-4xl sm:text-5xl md:text-[2.5rem] lg:text-6xl font-extrabold tracking-tight mb-2 leading-tight ${slide.key === 'pure' ? 'md:text-[2rem] md:leading-snug' : ''}`}>
                   <span>{slide.headline1}</span><br />
                   <span>{slide.headline2}</span>
                 </h1>

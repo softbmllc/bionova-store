@@ -52,86 +52,83 @@
       "outOfStock": "OUT OF STOCK",
       "viewCart": "View cart",
       "relatedProducts": "You might also like"
+    },
+    "promoSlider": {
+      "slide1": {
+        "title": "The science of Fuxion in action",
+        "subtitle": "Nutritional innovation in every sip"
+      },
+      "slide2": {
+        "title": "Your health, your choice",
+        "subtitle": "Nutraceutical products for better wellness"
+      },
+      "slide3": {
+        "title": "Fuxion transforms lives",
+        "subtitle": "Cutting-edge nutrition, real results"
+      },
+      "slide4": {
+        "title": "Vitality from the root",
+        "subtitle": "Formulas based on science and nature"
+      },
+      "slide5": {
+        "title": "Pure Encapsulations",
+        "subtitle": "Premium supplements backed by clinical evidence"
+      },
+      "slide6": {
+        "title": "Medical-grade confidence",
+        "subtitle": "Formulated without common allergens"
+      },
+      "slide7": {
+        "title": "Pure transparency",
+        "subtitle": "Clean ingredients, real results"
+      },
+      "slide8": {
+        "title": "Uncompromising quality",
+        "subtitle": "Strict standards in every capsule"
+      },
+      "slide9": {
+        "title": "Cognitive Support & Daily Vitality",
+        "subtitle": "Natural formulas for sharp focus and energy"
+      },
+      "slide10": {
+        "title": "Your Brain’s Best Ally",
+        "subtitle": "Supplements to protect and energize your mind"
+      },
+      "slide11": {
+        "title": "Sharper mind, stronger you",
+        "subtitle": "Clinically tested ingredients to support brain health"
+      },
+      "slide12": {
+        "title": "Longevity Starts Here",
+        "subtitle": "Support your long-term vitality with natural solutions"
+      },
+      "cta": "SHOP NOW"
+    },
+    "categories": {
+      "title": "Brands that empower your wellness",
+      "eyebrow": "FUNCTIONAL NUTRITION AND WELLNESS",
+      "shortTitle": "Empower your wellness"
+    },
+    "highlights": {
+      "title": "Wellness in action",
+      "subtitle": "Discover how our supplements enhance your daily health"
+    },
+    "about": {
+      "title": "About Us",
+      "description": "Bionova is an online store dedicated to offering high-quality supplements that enhance your health and wellness. We carefully select products from trusted brands such as Fuxion, Pure Encapsulations, and Double Wood Supplements, combining the power of nature with scientific evidence. Based in Miami, we ship safely across the United States.",
+      "mission": "Our mission is to bring you natural solutions backed by science, with personalized service, fast shipping, and a seamless, trustworthy shopping experience.",
+      "addressLabel": "Business address",
+      "address": "20200 NW 2nd Ave, STE 108\nMiami Gardens, FL 33169\nUnited States",
+      "emailLabel": "Contact email",
+      "email": "info@getbionova.com",
+      "cta": "Discover our products",
+      "subtitle": "OUR COMMITMENT",
+      "headline": "Science, nature, and wellness in every formula",
+      "preview": "At Bionova, we bring you high-quality natural supplements, carefully selected from leading brands like Fuxion, Pure Encapsulations, and Double Wood. We combine scientific evidence with the power of nature to support your health in a comprehensive and trustworthy way."
+    },
+    "contact": {
+      "title": "Need help? We're here for you.",
+      "description": "You can email us anytime and we’ll get back to you as soon as possible. Our team is based in Miami and will assist you in English or Spanish, depending on your preference.",
+      "cta": "Email us"
     }
-  ,
-  "promoSlider": {
-    "slide1": {
-      "title": "The science of Fuxion in action",
-      "subtitle": "Nutritional innovation in every sip"
-    },
-    "slide2": {
-      "title": "Your health, your choice",
-      "subtitle": "Nutraceutical products for better wellness"
-    },
-    "slide3": {
-      "title": "Fuxion transforms lives",
-      "subtitle": "Cutting-edge nutrition, real results"
-    },
-    "slide4": {
-      "title": "Vitality from the root",
-      "subtitle": "Formulas based on science and nature"
-    },
-    "slide5": {
-      "title": "Pure Encapsulations",
-      "subtitle": "Premium supplements backed by clinical evidence"
-    },
-    "slide6": {
-      "title": "Medical-grade confidence",
-      "subtitle": "Formulated without common allergens"
-    },
-    "slide7": {
-      "title": "Pure transparency",
-      "subtitle": "Clean ingredients, real results"
-    },
-    "slide8": {
-      "title": "Uncompromising quality",
-      "subtitle": "Strict standards in every capsule"
-    },
-    "slide9": {
-      "title": "Cognitive Support & Daily Vitality",
-      "subtitle": "Natural formulas for sharp focus and energy"
-    },
-    "slide10": {
-      "title": "Your Brain’s Best Ally",
-      "subtitle": "Supplements to protect and energize your mind"
-    },
-    "slide11": {
-      "title": "Sharper mind, stronger you",
-      "subtitle": "Clinically tested ingredients to support brain health"
-    },
-    "slide12": {
-      "title": "Longevity Starts Here",
-      "subtitle": "Support your long-term vitality with natural solutions"
-    },
-    "cta": "SHOP NOW"
-  }
-,
-  "categories": {
-    "title": "Brands that empower your wellness",
-    "eyebrow": "FUNCTIONAL NUTRITION AND WELLNESS"
-  },
-  "highlights": {
-    "title": "Wellness in action",
-    "subtitle": "Discover how our supplements enhance your daily health"
-  }
-,
-  "about": {
-    "title": "About Us",
-    "description": "Bionova is an online store dedicated to offering high-quality supplements that enhance your health and wellness. We carefully select products from trusted brands such as Fuxion, Pure Encapsulations, and Double Wood Supplements, combining the power of nature with scientific evidence. Based in Miami, we ship safely across the United States.",
-    "mission": "Our mission is to bring you natural solutions backed by science, with personalized service, fast shipping, and a seamless, trustworthy shopping experience.",
-    "addressLabel": "Business address",
-    "address": "20200 NW 2nd Ave, STE 108\nMiami Gardens, FL 33169\nUnited States",
-    "emailLabel": "Contact email",
-    "email": "info@getbionova.com",
-    "cta": "Discover our products",
-    "subtitle": "OUR COMMITMENT",
-    "headline": "Science, nature, and wellness in every formula",
-    "preview": "At Bionova, we bring you high-quality natural supplements, carefully selected from leading brands like Fuxion, Pure Encapsulations, and Double Wood. We combine scientific evidence with the power of nature to support your health in a comprehensive and trustworthy way."
-  }
-  ,
-  "contact": {
-    "title": "Need help? We're here for you.",
-    "description": "You can email us anytime and we’ll get back to you as soon as possible. Our team is based in Miami and will assist you in English or Spanish, depending on your preference.",
-    "cta": "Email us"
-  }
 }
