@@ -42,13 +42,15 @@ export default function PromoSlider() {
       link: '/fuxion',
     },
     {
-      mediaUrl: 'https://res.cloudinary.com/ddkyumyw3/image/upload/v1749962946/Dise%C3%B1o_sin_t%C3%ADtulo-54_qrardv.png',
+      mediaUrl: 'https://res.cloudinary.com/ddkyumyw3/image/upload/v1750434652/Dise%C3%B1o_sin_t%C3%ADtulo-65_ftkc26.png',
+      mobileMediaUrl: 'https://res.cloudinary.com/ddkyumyw3/image/upload/v1750434420/Dise%C3%B1o_sin_t%C3%ADtulo-66_lyqs50.png',
       title: () => t('promoSlider.slide5.title'),
       subtitle: () => t('promoSlider.slide5.subtitle'),
       link: '/pure',
     },
     {
       mediaUrl: 'https://res.cloudinary.com/ddkyumyw3/image/upload/v1749967618/Dise%C3%B1o_sin_t%C3%ADtulo-55_qz5p07.png',
+      mobileMediaUrl: 'https://res.cloudinary.com/ddkyumyw3/image/upload/v1750434912/Dise%C3%B1o_sin_t%C3%ADtulo-67_njrzl9.png',
       title: () => t('promoSlider.slide6.title'),
       subtitle: () => t('promoSlider.slide6.subtitle'),
       link: '/pure',
@@ -60,7 +62,8 @@ export default function PromoSlider() {
       link: '/pure',
     },
     {
-      mediaUrl: 'https://res.cloudinary.com/ddkyumyw3/image/upload/v1749962554/Dise%C3%B1o_sin_t%C3%ADtulo-51_fhqr0q.png',
+      mediaUrl: 'https://res.cloudinary.com/ddkyumyw3/image/upload/v1750436078/Dise%C3%B1o_sin_t%C3%ADtulo-70_za6sv3.png',
+      mobileMediaUrl: 'https://res.cloudinary.com/ddkyumyw3/image/upload/v1750435387/Dise%C3%B1o_sin_t%C3%ADtulo-68_tuhlur.png',
       title: () => t('promoSlider.slide8.title'),
       subtitle: () => t('promoSlider.slide8.subtitle'),
       link: '/pure',
