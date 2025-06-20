@@ -6,7 +6,7 @@ import 'swiper/css/navigation';
 import { Pagination, Autoplay, Navigation, Mousewheel } from 'swiper/modules';
 import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import './promo-slider.css';
@@ -16,12 +16,14 @@ export default function PromoSlider() {
   const slides = [
     {
       mediaUrl: 'https://res.cloudinary.com/ddkyumyw3/image/upload/v1749968399/Dise%C3%B1o_sin_t%C3%ADtulo-56_hqtx6c.png',
+      mobileMediaUrl: 'https://res.cloudinary.com/ddkyumyw3/image/upload/v1750358356/Dise%C3%B1o_sin_t%C3%ADtulo-59_xlqftg.png',
       title: () => t('promoSlider.slide1.title'),
       subtitle: () => t('promoSlider.slide1.subtitle'),
       link: '/fuxion',
     },
     {
       mediaUrl: 'https://res.cloudinary.com/ddkyumyw3/image/upload/v1749969504/Dise%C3%B1o_sin_t%C3%ADtulo-58_qr44kj.png',
+      mobileMediaUrl: 'https://res.cloudinary.com/ddkyumyw3/image/upload/v1750360204/Dise%C3%B1o_sin_t%C3%ADtulo-60_qy2tkk.png',
       title: () => t('promoSlider.slide2.title'),
       subtitle: () => t('promoSlider.slide2.subtitle'),
       link: '/fuxion',
@@ -34,6 +36,7 @@ export default function PromoSlider() {
     },
     {
       mediaUrl: 'https://res.cloudinary.com/ddkyumyw3/image/upload/v1749968869/Dise%C3%B1o_sin_t%C3%ADtulo-57_dziuig.png',
+      mobileMediaUrl: 'https://res.cloudinary.com/ddkyumyw3/image/upload/v1750360947/Dise%C3%B1o_sin_t%C3%ADtulo-63_ohq7zt.png',
       title: () => t('promoSlider.slide4.title'),
       subtitle: () => t('promoSlider.slide4.subtitle'),
       link: '/fuxion',
@@ -70,6 +73,7 @@ export default function PromoSlider() {
     },
     {
       mediaUrl: 'https://res.cloudinary.com/ddkyumyw3/image/upload/v1750114964/DW2_tmu2z6.png',
+      mobileMediaUrl: 'https://res.cloudinary.com/ddkyumyw3/image/upload/v1750361254/Dise%C3%B1o_sin_t%C3%ADtulo-64_dztsni.png',
       title: () => t('promoSlider.slide10.title'),
       subtitle: () => t('promoSlider.slide10.subtitle'),
       link: '/shop',
@@ -82,12 +86,22 @@ export default function PromoSlider() {
     },
     {
       mediaUrl: 'https://res.cloudinary.com/ddkyumyw3/image/upload/v1750114965/DW4_j7smok.png',
+      mobileMediaUrl: 'https://res.cloudinary.com/ddkyumyw3/image/upload/v1750360528/Dise%C3%B1o_sin_t%C3%ADtulo-62_rykr8h.png',
       title: () => t('promoSlider.slide12.title'),
       subtitle: () => t('promoSlider.slide12.subtitle'),
       link: '/shop',
     },
   ];
   const swiperRef = useRef<any>(null);
+
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const handlePrev = () => {
     if (swiperRef.current) swiperRef.current.slidePrev();
@@ -134,7 +148,7 @@ export default function PromoSlider() {
                 />
               ) : (
                 <img
-                  src={slide.mediaUrl}
+                  src={isMobile && slide.mobileMediaUrl ? slide.mobileMediaUrl : slide.mediaUrl}
                   alt={slide.title()}
                   className="absolute inset-0 w-full h-full object-cover"
                 />
