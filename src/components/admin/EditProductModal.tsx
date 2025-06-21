@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { useEffect } from "react";
 import ImageUploader from "./ImageUploader";
-import { handleImageUpload } from "../../utils/handleImageUpload";
 import TiptapEditor from "./TiptapEditor";
 import { Product } from "../../data/types";
 import { updateProduct, fetchCategories, fetchSubcategories } from "../../firebaseUtils";
@@ -50,9 +49,6 @@ interface Props {
   onClose: () => void;
 }
 
-// Constantes para Cloudinary
-const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/ddkyumyw3/image/upload";
-const UPLOAD_PRESET = "unsigned_preset";
 
 // Componente para imagen arrastrable con flechas
 function SortableImageItem({
@@ -181,25 +177,6 @@ useEffect(() => {
   loadAllData();
 }, []);
 
-const uploadToCloudinary = async (file: File): Promise<string> => {
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("upload_preset", UPLOAD_PRESET);
-
-  try {
-    const response = await fetch(CLOUDINARY_URL, {
-      method: "POST",
-      body: formData,
-    });
-
-    if (!response.ok) throw new Error(`Error de Cloudinary: ${response.statusText}`);
-    const data = await response.json();
-    return data.secure_url;
-  } catch (error) {
-    console.error("Error al subir la imagen a Cloudinary:", error);
-    throw error;
-  }
-};
 
 const handleChange = (field: keyof Product, value: any) => {
   setFormData((prev) => ({ ...prev, [field]: value }));
@@ -614,7 +591,6 @@ return (
                 <span className="text-gray-400 text-sm ml-2">(arrastrá para ordenar)</span>
               </label>
               <ImageUploader
-                onUpload={handleUpload}
                 images={images.filter((img): img is string => img !== null)}
                 onChange={setImages}
               />

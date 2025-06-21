@@ -1,7 +1,6 @@
 // src/components/admin/CreateProductForm.tsx
 import React, { useState, useEffect, useRef } from "react";
-import { handleImageUpload } from "../../utils/handleImageUpload";
-import ImageUploader from './ImageUploader';
+import ImageUploader from "./ImageUploader";
 import TiptapEditor from "./TiptapEditor";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
@@ -273,16 +272,6 @@ useEffect(() => {
     })
   );
   
-  // Nueva función para subir imágenes usando handleImageUpload util
-  const handleUpload = async (file: File) => {
-    try {
-      const imageUrl = await handleImageUpload(file);
-      if (!imageUrl) return;
-      setImages([...images, imageUrl]);
-    } catch (error) {
-      console.error("Error al subir la imagen:", error);
-    }
-  };
   
   const {
     register,
@@ -325,7 +314,14 @@ useEffect(() => {
 
   // La función de carga de imágenes ahora se maneja a través de handleUpload (ver abajo en el componente ImageUploader)
 
+  // Nueva función para manejar la subida de imágenes (más simple)
+  // Siempre sobrescribe la lista de imágenes, nunca concatena
+  const handleImagesUpload = (uploadedImages: string[]) => {
+    setImages(uploadedImages);
+  };
+
   const handleRemoveImage = (index: number) => {
+    // Sobrescribe la lista en vez de concatenar
     setImages((prev) => prev.filter((_, i) => i !== index));
   };
   
@@ -336,12 +332,10 @@ useEffect(() => {
     ) {
       return;
     }
-    
     const newImages = [...images];
     const newIndex = direction === "left" ? index - 1 : index + 1;
-    
     [newImages[index], newImages[newIndex]] = [newImages[newIndex], newImages[index]];
-    
+    // Sobrescribe la lista
     setImages(newImages);
   };
 
@@ -600,11 +594,7 @@ useEffect(() => {
             Imágenes <span className="text-red-500">*</span>
           </label>
           {/* Nuevo componente ImageUploader */}
-          <ImageUploader
-            images={images}
-            onChange={setImages}
-            onUpload={handleImageUpload}
-          />
+          <ImageUploader onChange={handleImagesUpload} images={images} />
         </div>
 
         {images.length > 0 && (

@@ -1,4 +1,6 @@
 // backend/server.ts
+import dotenv from "dotenv";
+dotenv.config();
 import express from "express";
 import cors from "cors";
 import { MercadoPagoConfig, Preference } from "mercadopago";
@@ -49,6 +51,9 @@ app.post("/webhook", (req, res) => {
   // Acá podrías guardar en DB, enviar mail, etc.
   res.sendStatus(200);
 });
+
+import getImagekitAuth from "./getImagekitAuth";
+app.use("/api", getImagekitAuth);
 
 // 🔊 Iniciar servidor
 app.listen(port, () => {
