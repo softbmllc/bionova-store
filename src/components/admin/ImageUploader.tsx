@@ -1,13 +1,16 @@
 // src/components/admin/ImageUploader.tsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { X } from "lucide-react";
+import { handleImageUpload } from "../../utils/handleImageUpload";
+import ImageKit from "imagekit-javascript";
 
 interface ImageUploaderProps {
   images: string[];
   onChange: (images: string[]) => void;
+  onUpload?: (file: File) => Promise<string | null>;
 }
 
-export default function ImageUploader({ images, onChange }: ImageUploaderProps) {
+export default function ImageUploader({ images, onChange, onUpload }: ImageUploaderProps) {
   const [localImages, setLocalImages] = useState<string[]>(images || []);
   const [error, setError] = useState("");
 
@@ -15,53 +18,66 @@ export default function ImageUploader({ images, onChange }: ImageUploaderProps) 
     setLocalImages(images || []);
   }, [images]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setError("");
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Verificar si la imagen es un formato webp y mostrar advertencia
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files ? Array.from(e.target.files) : [];
+
+    console.log("Archivos seleccionados:", files);
+    if (!files || files.length === 0) return;
+    setError("");
+
+    const uploadPromises = files.map(async (file) => {
       const fileExt = file.name.split('.').pop()?.toLowerCase();
-      
       if (fileExt === 'webp') {
-        // En lugar de prohibir, vamos a convertir el nombre para evitar problemas
         alert("⚠️ Atención: Las imágenes en formato .webp pueden causar problemas de navegación. Recomendamos usar formato .jpg o .png.");
       }
-    }
 
-    const newImages: string[] = [];
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
       if (file.size > 5000000) {
         setError("Una o más imágenes superan los 5MB");
-        return;
+        return null;
       }
 
-      // Renombrar el archivo para evitar problemas con nombres especiales
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (e.target?.result) {
-          // Generar un nombre seguro para la imagen
-          const timestamp = Date.now();
-          const fileExt = file.name.split('.').pop();
-          const safeFilename = `image_${timestamp}.${fileExt}`;
-          
-          // Agregar a las imágenes locales para visualización
-          newImages.push(e.target.result as string);
-          
-          // Si todas las imágenes están listas, actualizar
-          if (newImages.length === files.length) {
-            const updatedImages = [...localImages, ...newImages];
-            setLocalImages(updatedImages);
-            onChange(updatedImages);
-          }
+      // Unsigned upload using fetch and public key
+      try {
+        const uploadEndpoint = "https://ik.imagekit.io/devrodri/upload";
+
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("fileName", file.name);
+        formData.append("uploadPreset", "unsigned_preset");
+        formData.append("useUniqueFileName", "true");
+
+        const response = await fetch(uploadEndpoint, {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error("Error en la subida a ImageKit");
         }
-      };
-      reader.readAsDataURL(file);
-    }
+
+        const data = await response.json();
+        console.log("📤 Imagen subida:", data.url);
+        return data.url;
+      } catch (uploadError) {
+        console.error("Error al subir imagen:", uploadError);
+        setError("Error al subir una o más imágenes.");
+        return null;
+      }
+    });
+
+    const results = await Promise.all(uploadPromises);
+    const successfulUploads = results.filter((url: string | null): url is string => !!url);
+
+    const updatedImages = [...localImages, ...successfulUploads];
+    setLocalImages(updatedImages);
+    console.log("Imágenes subidas:", updatedImages);
+    onChange(updatedImages);
   };
 
   const removeImage = (index: number) => {
@@ -74,8 +90,8 @@ export default function ImageUploader({ images, onChange }: ImageUploaderProps) 
   return (
     <div>
       <div className="mb-3">
-        <label
-          htmlFor="image-upload"
+        <div
+          onClick={triggerFileInput}
           className="block border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:bg-gray-50 transition"
         >
           <span className="block text-gray-500 mb-2">
@@ -85,14 +101,14 @@ export default function ImageUploader({ images, onChange }: ImageUploaderProps) 
             PNG, JPG o WEBP, máx. 5MB
           </span>
           <input
-            id="image-upload"
+            ref={fileInputRef}
             type="file"
             multiple
             accept="image/*"
-            onChange={handleFileChange}
             className="hidden"
+            onChange={handleFileChange}
           />
-        </label>
+        </div>
       </div>
 
       {error && (

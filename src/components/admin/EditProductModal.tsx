@@ -1,9 +1,13 @@
 // src/components/admin/EditProductModal.tsx
-import { useState, useEffect } from "react";
+import React, { useState } from 'react';
+import { useEffect } from "react";
+import ImageUploader from "./ImageUploader";
+import { handleImageUpload } from "../../utils/handleImageUpload";
 import TiptapEditor from "./TiptapEditor";
 import { Product } from "../../data/types";
 import { updateProduct, fetchCategories, fetchSubcategories } from "../../firebaseUtils";
 import { generateSlug } from "../../utils/generateSlug";
+import { uploadImageToImageKit } from "../../utils/imagekitUtils";
 
 // Drag and Drop
 import {
@@ -202,36 +206,29 @@ const handleChange = (field: keyof Product, value: any) => {
 };
 
 
-const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-  if (!e.target.files || e.target.files.length === 0) return;
-  setUploadingImages(true);
-  setError("");
+const [images, setImages] = useState<(string | null)[]>(
+  product.images?.filter((img): img is string => typeof img === 'string') || []
+);
+
+// Mantener sincronizadas las imágenes con formData
+useEffect(() => {
+  setFormData((prev) => ({
+    ...prev,
+    images: images.filter((img): img is string => img !== null),
+  }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [images]);
+
+const handleUpload = async (file: File): Promise<string | null> => {
+  console.log("📤 Subiendo archivo:", file);
 
   try {
-    const files = Array.from(e.target.files);
-    const uploadedUrls: string[] = [];
-
-    for (const file of files) {
-      if (!file.type.startsWith("image/")) {
-        setError("Uno de los archivos no es una imagen válida.");
-        setUploadingImages(false);
-        return;
-      }
-      const imageUrl = await uploadToCloudinary(file);
-      uploadedUrls.push(imageUrl);
-    }
-
-    setFormData((prev) => ({
-      ...prev,
-      images: [...(prev.images || []), ...uploadedUrls],
-    }));
-
-    e.target.value = "";
+    const url = await uploadImageToImageKit(file);
+    console.log("✅ URL devuelta por ImageKit:", url);
+    return url;
   } catch (error) {
-    console.error("Error en la carga de imágenes:", error);
-    setError("Error al subir una o más imágenes. Intente nuevamente.");
-  } finally {
-    setUploadingImages(false);
+    console.error("❌ Error al subir imagen:", error);
+    return null;
   }
 };
 
@@ -611,43 +608,16 @@ return (
 </div>
 
             {/* Imágenes */}
-            <div>
-              <h4 className="font-medium text-gray-900 mb-2">Imágenes</h4>
-              <div className="mb-4">
-                <label className="inline-block px-4 py-2 bg-black text-white rounded-md shadow-sm hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer">
-                  <input
-                    type="file"
-                    multiple
-                    className="hidden"
-                    onChange={handleImageUpload}
-                    accept="image/*"
-                    disabled={uploadingImages}
-                  />
-                  {uploadingImages ? "Subiendo..." : "Agregar Imagen"}
-                </label>
-              </div>
-              {formData.images && formData.images.length > 0 ? (
-                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                  <SortableContext items={formData.images} strategy={verticalListSortingStrategy}>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                      {formData.images.map((url, index) => (
-                        <SortableImageItem
-                          key={url}
-                          id={url}
-                          url={url}
-                          onRemove={() => removeImage(index)}
-                          onMoveLeft={() => moveImageLeft(index)}
-                          onMoveRight={() => moveImageRight(index)}
-                        />
-                      ))}
-                    </div>
-                  </SortableContext>
-                </DndContext>
-              ) : (
-                <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
-                  <p className="text-gray-500">No hay imágenes. Por favor suba al menos una imagen.</p>
-                </div>
-              )}
+            <div className="space-y-4">
+              <label className="flex justify-between items-center">
+                Imágenes
+                <span className="text-gray-400 text-sm ml-2">(arrastrá para ordenar)</span>
+              </label>
+              <ImageUploader
+                onUpload={handleUpload}
+                images={images.filter((img): img is string => img !== null)}
+                onChange={setImages}
+              />
             </div>
           </div>
         </div>

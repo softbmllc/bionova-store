@@ -1,5 +1,7 @@
 // src/components/admin/CreateProductForm.tsx
 import React, { useState, useEffect, useRef } from "react";
+import { handleImageUpload } from "../../utils/handleImageUpload";
+import ImageUploader from './ImageUploader';
 import TiptapEditor from "./TiptapEditor";
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import { useNavigate, useParams } from "react-router-dom";
@@ -271,27 +273,14 @@ useEffect(() => {
     })
   );
   
-  // Función para subir imágenes a Cloudinary - Mejorada para múltiples imágenes
-  const uploadToCloudinary = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("upload_preset", UPLOAD_PRESET);
-    
+  // Nueva función para subir imágenes usando handleImageUpload util
+  const handleUpload = async (file: File) => {
     try {
-      const response = await fetch(CLOUDINARY_URL, {
-        method: "POST",
-        body: formData,
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Error de Cloudinary: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      return data.secure_url;
+      const imageUrl = await handleImageUpload(file);
+      if (!imageUrl) return;
+      setImages([...images, imageUrl]);
     } catch (error) {
-      console.error("Error al subir la imagen a Cloudinary:", error);
-      throw error;
+      console.error("Error al subir la imagen:", error);
     }
   };
   
@@ -334,37 +323,7 @@ useEffect(() => {
   };
 
 
-  // Mejorado: Manejo de carga de múltiples imágenes
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!event.target.files || event.target.files.length === 0) return;
-    
-    setUploadingImages(true);
-    setError("");
-    
-    try {
-      const files = Array.from(event.target.files);
-      console.log(`[CreateProductForm] Subiendo ${files.length} imágenes...`);
-      
-      // Subir todas las imágenes en paralelo
-      const uploadPromises = files.map(file => uploadToCloudinary(file));
-      const uploadedUrls = await Promise.all(uploadPromises);
-      
-      // Agregar las URLs a las imágenes existentes
-      setImages(prevImages => [...prevImages, ...uploadedUrls]);
-      
-      console.log(`[CreateProductForm] ${uploadedUrls.length} imágenes subidas con éxito`);
-      
-      // Limpiar el input para permitir subir los mismos archivos nuevamente si es necesario
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    } catch (error) {
-      console.error("[CreateProductForm] Error al subir imágenes:", error);
-      setError("Error al subir imágenes. Intente nuevamente.");
-    } finally {
-      setUploadingImages(false);
-    }
-  };
+  // La función de carga de imágenes ahora se maneja a través de handleUpload (ver abajo en el componente ImageUploader)
 
   const handleRemoveImage = (index: number) => {
     setImages((prev) => prev.filter((_, i) => i !== index));
@@ -640,33 +599,12 @@ useEffect(() => {
           <label className="block font-medium">
             Imágenes <span className="text-red-500">*</span>
           </label>
-          
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            onChange={handleImageUpload}
-            className="hidden"
-            id="image-upload"
+          {/* Nuevo componente ImageUploader */}
+          <ImageUploader
+            images={images}
+            onChange={setImages}
+            onUpload={handleImageUpload}
           />
-          
-          <label
-            htmlFor="image-upload"
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md cursor-pointer transition-colors flex items-center justify-center disabled:opacity-50"
-          >
-            {uploadingImages ? (
-              <>
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Subiendo...
-              </>
-            ) : (
-              <>Agregar imágenes</>
-            )}
-          </label>
         </div>
 
         {images.length > 0 && (
